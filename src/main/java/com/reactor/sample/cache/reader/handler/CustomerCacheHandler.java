@@ -5,7 +5,7 @@ import com.reactor.rust.annotations.PathVariable;
 import com.reactor.rust.annotations.RequestMapping;
 import com.reactor.rust.annotations.RequestParam;
 import com.reactor.rust.annotations.RouteAdmission;
-import com.reactor.rust.cache.CacheReadResult;
+import com.reactor.rust.cache.api.CacheReadResult;
 import com.reactor.rust.http.RawResponse;
 import com.reactor.rust.http.ResponseEntity;
 import com.reactor.sample.cache.reader.service.CustomerCacheService;

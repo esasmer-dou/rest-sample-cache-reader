@@ -1,8 +1,8 @@
 package com.reactor.sample.cache.reader.service;
 
-import com.reactor.rust.cache.CacheReadResult;
-import com.reactor.rust.cache.RustCache;
-import com.reactor.rust.cache.VersionedJsonCacheReader;
+import com.reactor.rust.cache.api.CacheReadResult;
+import com.reactor.rust.cache.core.RustCache;
+import com.reactor.rust.cache.versioned.VersionedJsonCacheReader;
 import com.reactor.sample.cache.reader.config.CacheReaderProperties;
 
 public final class CustomerCacheService {
