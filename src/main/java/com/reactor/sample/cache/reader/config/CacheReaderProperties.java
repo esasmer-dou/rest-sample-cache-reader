@@ -1,0 +1,63 @@
+package com.reactor.sample.cache.reader.config;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Locale;
+import java.util.Properties;
+
+public final class CacheReaderProperties {
+
+    private static final String RESOURCE = "rust-spring.properties";
+
+    private final Properties properties;
+
+    private CacheReaderProperties(Properties properties) {
+        this.properties = properties;
+    }
+
+    public static CacheReaderProperties load() {
+        Properties loaded = new Properties();
+        try (InputStream input = CacheReaderProperties.class.getClassLoader().getResourceAsStream(RESOURCE)) {
+            if (input == null) {
+                throw new IllegalStateException("Missing classpath resource: " + RESOURCE);
+            }
+            loaded.load(input);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to load " + RESOURCE, e);
+        }
+        return new CacheReaderProperties(loaded);
+    }
+
+    public Properties asProperties() {
+        Properties copy = new Properties();
+        copy.putAll(properties);
+        return copy;
+    }
+
+    public String get(String key) {
+        String value = System.getProperty(key);
+        if (value == null) {
+            value = System.getenv(toEnvKey(key));
+        }
+        if (value == null) {
+            value = properties.getProperty(key);
+        }
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing required property: " + key);
+        }
+        return value.trim();
+    }
+
+    public int getInt(String key) {
+        String value = get(key);
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Property must be an integer: " + key + "=" + value, e);
+        }
+    }
+
+    private static String toEnvKey(String key) {
+        return key.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
+    }
+}
