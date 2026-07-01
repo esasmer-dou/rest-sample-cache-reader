@@ -6,7 +6,7 @@ Minimal Rust-Java REST sample that serves precomputed Redis JSON through `java-r
 
 There is no database connection, no scheduler, no Java Redis client, and no Dubbo in this process. Java owns the REST business handler shape; Rust owns HTTP I/O and Redis I/O.
 
-This sample is wired to `com.reactor:java-rust-cache:0.1.0-rc3`. The cache dependency includes the matching Windows/Linux native Redis bridge; when `rust-java-rest` is on the classpath, the same native bridge is reused.
+This sample is wired to `com.reactor:java-rust-cache:0.1.0`. The cache dependency includes the matching Windows/Linux native Redis bridge; when `rust-java-rest` is on the classpath, the same native bridge is reused.
 
 ## Maven Package Access
 

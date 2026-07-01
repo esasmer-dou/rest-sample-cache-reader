@@ -6,7 +6,7 @@
 
 Bu process içinde DB bağlantısı, scheduler, Java Redis client veya Dubbo yoktur. Java REST business handler şeklini korur; HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.1.0-rc3` ile çalışacak şekilde güncellendi. Cache dependency’si matching Windows/Linux native Redis bridge binary’sini içerir; `rust-java-rest` classpath’te varsa aynı native bridge reuse edilir.
+Bu örnek `com.reactor:java-rust-cache:0.1.0` ile çalışacak şekilde güncellendi. Cache dependency’si matching Windows/Linux native Redis bridge binary’sini içerir; `rust-java-rest` classpath’te varsa aynı native bridge reuse edilir.
 
 ## Maven Package Erişimi
 
