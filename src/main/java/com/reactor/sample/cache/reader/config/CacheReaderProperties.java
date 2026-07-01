@@ -57,6 +57,15 @@ public final class CacheReaderProperties {
         }
     }
 
+    public long getLong(String key) {
+        String value = get(key);
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Property must be a long: " + key + "=" + value, e);
+        }
+    }
+
     private static String toEnvKey(String key) {
         return key.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
     }

@@ -12,7 +12,9 @@ public final class CustomerCacheService {
 
     public CustomerCacheService(RustCache cache, CacheReaderProperties properties) {
         this.cache = cache;
-        this.customers = cache.versionedJson(properties.get("sample.cache.customer.namespace")).reader();
+        this.customers = cache.versionedJsonReader(
+                properties.get("sample.cache.customer.namespace"),
+                properties.getLong("sample.cache.customer.version-cache-ms"));
     }
 
     public CacheReadResult customer(long id) {

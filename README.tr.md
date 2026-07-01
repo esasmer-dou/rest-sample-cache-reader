@@ -6,6 +6,8 @@
 
 Bu process içinde DB bağlantısı, scheduler, Java Redis client veya Dubbo yoktur. Java REST business handler şeklini korur; HTTP I/O ve Redis I/O Rust tarafındadır.
 
+Bu örnek `com.reactor:java-rust-cache:0.1.0-rc3` ile çalışacak şekilde güncellendi. Cache dependency’si matching Windows/Linux native Redis bridge binary’sini içerir; `rust-java-rest` classpath’te varsa aynı native bridge reuse edilir.
+
 ## Gerçek Senaryo
 
 Response’u önceden hazırlanmış Redis read model’den dönebileceğin read-heavy API pod’ları için bu örnek doğru modeldir.
@@ -43,8 +45,7 @@ Sonra reader’ı başlat:
 mvn -q clean package
 mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
 $cp = Get-Content target\cp.txt
-java "-Djava.library.path=..\rust-spring\target\release" `
-  "-Dreactor.cache.redis.port=16379" `
+java "-Dreactor.cache.redis.port=16379" `
   "-Dserver.port=18080" `
   -cp "target\classes;$cp" `
   com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
@@ -65,6 +66,7 @@ java "-Djava.library.path=..\rust-spring\target\release" `
 |---|---:|---|
 | `reactor.runtime.profile` | `micro-rest` | Cache-backed read endpointler için düşük RSS REST profili. |
 | `sample.cache.customer.namespace` | `crm.customer` | Writer namespace’i ile aynı olmalı. |
+| `sample.cache.customer.version-cache-ms` | `1000` | Reader’ın current snapshot pointer’ını Java memory’de ne kadar tutacağını belirler. Yeni publish daha hızlı görünsün istiyorsan düşür; çok hot read path’lerde Redis lookup azaltmak için artır. |
 | `reactor.cache.redis.read-connections` | `2` | Redis read latency gerçek darboğaz ise ölçerek artır. |
 | `reactor.cache.redis.max-read-inflight` | `128` | Eşzamanlı Redis read sayısını sınırlar. Memory-first pod’da düşür. |
 | `reactor.rust.jni.workers` | `1` | Precomputed JSON read için iyi başlangıçtır. |

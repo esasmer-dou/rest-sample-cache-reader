@@ -16,7 +16,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <rust-java-rest.version>3.2.2</rust-java-rest.version>
-        <java-rust-cache.version>0.1.0-rc2</java-rust-cache.version>
+        <java-rust-cache.version>0.1.0-rc3</java-rust-cache.version>
         <junit.version>5.11.4</junit.version>
     </properties>
 

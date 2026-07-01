@@ -6,6 +6,8 @@ Minimal Rust-Java REST sample that serves precomputed Redis JSON through `java-r
 
 There is no database connection, no scheduler, no Java Redis client, and no Dubbo in this process. Java owns the REST business handler shape; Rust owns HTTP I/O and Redis I/O.
 
+This sample is wired to `com.reactor:java-rust-cache:0.1.0-rc3`. The cache dependency includes the matching Windows/Linux native Redis bridge; when `rust-java-rest` is on the classpath, the same native bridge is reused.
+
 ## Real Scenario
 
 Use this sample for read-heavy API pods where the response can be served from a precomputed Redis read model.
@@ -43,8 +45,7 @@ Then start this service:
 mvn -q clean package
 mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
 $cp = Get-Content target\cp.txt
-java "-Djava.library.path=..\rust-spring\target\release" `
-  "-Dreactor.cache.redis.port=16379" `
+java "-Dreactor.cache.redis.port=16379" `
   "-Dserver.port=18080" `
   -cp "target\classes;$cp" `
   com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
@@ -65,6 +66,7 @@ java "-Djava.library.path=..\rust-spring\target\release" `
 |---|---:|---|
 | `reactor.runtime.profile` | `micro-rest` | Low-RSS REST profile for cache-backed reads. |
 | `sample.cache.customer.namespace` | `crm.customer` | Must match writer namespace. |
+| `sample.cache.customer.version-cache-ms` | `1000` | How long the reader keeps the current snapshot pointer in Java memory. Lower for faster publish visibility; raise for very hot read paths. |
 | `reactor.cache.redis.read-connections` | `2` | Increase only if Redis read latency is proven bottleneck. |
 | `reactor.cache.redis.max-read-inflight` | `128` | Bounds concurrent Redis reads. Lower for memory-first pods. |
 | `reactor.rust.jni.workers` | `1` | Good starting point for precomputed JSON reads. |
