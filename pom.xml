@@ -39,6 +39,17 @@
         </dependency>
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>github-rust-java-rest</id>
+            <url>https://maven.pkg.github.com/esasmer-dou/rust-java-rest</url>
+        </repository>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/esasmer-dou/java-rust-cache</url>
+        </repository>
+    </repositories>
+
     <build>
         <plugins>
             <plugin>

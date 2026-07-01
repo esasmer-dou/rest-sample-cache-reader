@@ -8,6 +8,27 @@ Bu process içinde DB bağlantısı, scheduler, Java Redis client veya Dubbo yok
 
 Bu örnek `com.reactor:java-rust-cache:0.1.0-rc3` ile çalışacak şekilde güncellendi. Cache dependency’si matching Windows/Linux native Redis bridge binary’sini içerir; `rust-java-rest` classpath’te varsa aynı native bridge reuse edilir.
 
+## Maven Package Erişimi
+
+Bu örnek `rust-java-rest` ve `java-rust-cache` bağımlılıklarını GitHub Packages üzerinden çeker. Maven `settings.xml` dosyana `read:packages` yetkisi olan bir GitHub token eklemelisin:
+
+```xml
+<servers>
+  <server>
+    <id>github-rust-java-rest</id>
+    <username>YOUR_GITHUB_USERNAME</username>
+    <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+  </server>
+  <server>
+    <id>github</id>
+    <username>YOUR_GITHUB_USERNAME</username>
+    <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+  </server>
+</servers>
+```
+
+Maven çalıştırmadan önce `GITHUB_PACKAGES_TOKEN` environment variable olarak verilmelidir.
+
 ## Gerçek Senaryo
 
 Response’u önceden hazırlanmış Redis read model’den dönebileceğin read-heavy API pod’ları için bu örnek doğru modeldir.

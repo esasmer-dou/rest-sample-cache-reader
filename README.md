@@ -8,6 +8,27 @@ There is no database connection, no scheduler, no Java Redis client, and no Dubb
 
 This sample is wired to `com.reactor:java-rust-cache:0.1.0-rc3`. The cache dependency includes the matching Windows/Linux native Redis bridge; when `rust-java-rest` is on the classpath, the same native bridge is reused.
 
+## Maven Package Access
+
+This sample pulls `rust-java-rest` and `java-rust-cache` from GitHub Packages. Add a GitHub token with `read:packages` access to your Maven `settings.xml`:
+
+```xml
+<servers>
+  <server>
+    <id>github-rust-java-rest</id>
+    <username>YOUR_GITHUB_USERNAME</username>
+    <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+  </server>
+  <server>
+    <id>github</id>
+    <username>YOUR_GITHUB_USERNAME</username>
+    <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+  </server>
+</servers>
+```
+
+Then set `GITHUB_PACKAGES_TOKEN` before running Maven.
+
 ## Real Scenario
 
 Use this sample for read-heavy API pods where the response can be served from a precomputed Redis read model.
