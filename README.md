@@ -6,7 +6,7 @@ Minimal Rust-Java REST sample that serves precomputed Redis JSON through `java-r
 
 There is no database connection, no scheduler, no Java Redis client, and no Dubbo in this process. Java owns the REST business handler shape; Rust owns HTTP I/O and Redis I/O.
 
-This sample is wired to `com.reactor:java-rust-cache:0.1.0`. The cache dependency includes the matching Windows/Linux native Redis bridge; when `rust-java-rest` is on the classpath, the same native bridge is reused.
+This sample is wired to `com.reactor:java-rust-cache:0.2.0` and `com.reactor:rust-java-rest:3.2.3`. Keep these versions aligned because Cluster/Sentinel support needs Redis native ABI version `2`.
 
 ## Maven Package Access
 
@@ -37,6 +37,16 @@ mvn -q dependency:resolve
 ```
 
 If Maven returns `401 Unauthorized`, check the token scope, environment variable, and server id matching first.
+
+## Container Runtime Note
+
+For minimal containers, set a writable native extract directory:
+
+```bash
+-Dreactor.cache.native.extract-dir=/tmp/java-rust-cache/native
+```
+
+The packaged Linux native binary is built on a manylinux2014/glibc 2.17 baseline. It is intended to run on common glibc-based images including CentOS 8, UBI 8/9, Ubuntu/Jammy, and Semeru/OpenJ9. If you use a custom native build, build it on the oldest Linux base your platform supports.
 
 ## Real Scenario
 
@@ -81,6 +91,42 @@ java "-Dreactor.cache.redis.port=16379" `
   com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
 ```
 
+## Production Redis Topology
+
+Local development uses standalone Redis because it is easy to run. Production read pods should normally use Sentinel or Cluster.
+
+Use Sentinel when Redis has one writable primary and failover is handled by Sentinel:
+
+```yaml
+env:
+  - name: REACTOR_CACHE_REDIS_TOPOLOGY
+    value: "sentinel"
+  - name: REACTOR_CACHE_REDIS_NODES
+    value: "redis-sentinel-0:26379,redis-sentinel-1:26379,redis-sentinel-2:26379"
+  - name: REACTOR_CACHE_REDIS_SENTINEL_MASTER_NAME
+    value: "mymaster"
+  - name: REACTOR_CACHE_REDIS_READ_CONNECTIONS
+    value: "2"
+  - name: REACTOR_CACHE_REDIS_MAX_READ_INFLIGHT
+    value: "128"
+```
+
+Use Cluster when Redis data is sharded across nodes:
+
+```yaml
+env:
+  - name: REACTOR_CACHE_REDIS_TOPOLOGY
+    value: "cluster"
+  - name: REACTOR_CACHE_REDIS_NODES
+    value: "redis-cluster-0:6379,redis-cluster-1:6379,redis-cluster-2:6379"
+  - name: REACTOR_CACHE_REDIS_CLUSTER_MAX_REDIRECTS
+    value: "5"
+  - name: REACTOR_CACHE_REDIS_TOPOLOGY_REFRESH_MS
+    value: "30000"
+```
+
+For Cluster, keep `reactor.cache.redis.database=0`. If related keys must stay on the same Redis slot, design keys with hash tags such as `customer:{1001}:profile` and `customer:{1001}:orders`.
+
 ## Why This Shape
 
 | Choice | Benefit | Trade-off |
@@ -99,5 +145,8 @@ java "-Dreactor.cache.redis.port=16379" `
 | `sample.cache.customer.version-cache-ms` | `1000` | How long the reader keeps the current snapshot pointer in Java memory. Lower for faster publish visibility; raise for very hot read paths. |
 | `reactor.cache.redis.read-connections` | `2` | Increase only if Redis read latency is proven bottleneck. |
 | `reactor.cache.redis.max-read-inflight` | `128` | Bounds concurrent Redis reads. Lower for memory-first pods. |
+| `reactor.cache.redis.topology` | `standalone` | Use `sentinel` or `cluster` for production HA/sharding. |
+| `reactor.cache.redis.nodes` | empty | Sentinel node list or Cluster startup node list. |
+| `reactor.cache.redis.sentinel.master-name` | empty | Required only for Sentinel. |
 | `reactor.rust.jni.workers` | `1` | Good starting point for precomputed JSON reads. |
 | `reactor.rust.route-admission.*` | route-specific | Tune hot endpoints without increasing global queues. |
