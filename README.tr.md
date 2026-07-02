@@ -6,7 +6,7 @@
 
 Bu process içinde DB bağlantısı, scheduler, Java Redis client veya Dubbo yoktur. Java REST business handler şeklini korur; HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.2.0` ve `com.reactor:rust-java-rest:3.2.3` ile çalışacak şekilde güncellendi. Bu iki versiyonu birlikte kullan; Cluster/Sentinel desteği Redis native ABI version `2` gerektirir.
+Bu örnek `com.reactor:java-rust-cache:0.2.1` ve `com.reactor:rust-java-rest:3.2.4` ile çalışacak şekilde güncellendi. Bu iki versiyonu birlikte kullan; Cluster Redis native ABI version `2`, Sentinel master failover refresh ise ABI version `3` gerektirir.
 
 ## Maven Package Erişimi
 
@@ -148,5 +148,10 @@ Cluster’da `reactor.cache.redis.database=0` kalmalıdır. Birbiriyle ilişkili
 | `reactor.cache.redis.topology` | `standalone` | Production HA/sharding için `sentinel` veya `cluster` seç. |
 | `reactor.cache.redis.nodes` | empty | Sentinel node listesi veya Cluster startup node listesi. |
 | `reactor.cache.redis.sentinel.master-name` | empty | Sadece Sentinel için zorunludur. |
+| `reactor.cache.redis.sentinel.master-check-ms` | `1000` | Sentinel modunda failover sonrası master değişimini ne sıklıkla kontrol edeceğini belirler. Daha hızlı toparlanma için düşür; ölçmeden agresif azaltma. |
 | `reactor.rust.jni.workers` | `1` | Precomputed JSON read için iyi başlangıçtır. |
 | `reactor.rust.route-admission.*` | route bazlı | Global queue büyütmeden hot endpoint’i ayrı tune etmek için kullan. |
+
+## Production Config Kopyası
+
+Default `src/main/resources/rust-spring.properties` dosyası localde kolay çalışmak için sade tutuldu. Kubernetes veya container production için başlangıç dosyası olarak `src/main/resources/rust-spring.production.properties` kullan. Bu dosya component/route index üretimini zorunlu tutar, runtime classpath scan fallback’i kapatır, footprint gate’i `enforce` moduna alır ve native pool değerlerini düşük memory hedefiyle küçük başlatır.

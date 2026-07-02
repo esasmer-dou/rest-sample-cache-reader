@@ -6,7 +6,7 @@ Minimal Rust-Java REST sample that serves precomputed Redis JSON through `java-r
 
 There is no database connection, no scheduler, no Java Redis client, and no Dubbo in this process. Java owns the REST business handler shape; Rust owns HTTP I/O and Redis I/O.
 
-This sample is wired to `com.reactor:java-rust-cache:0.2.0` and `com.reactor:rust-java-rest:3.2.3`. Keep these versions aligned because Cluster/Sentinel support needs Redis native ABI version `2`.
+This sample is wired to `com.reactor:java-rust-cache:0.2.1` and `com.reactor:rust-java-rest:3.2.4`. Keep these versions aligned because Cluster uses Redis native ABI version `2` and Sentinel master failover refresh uses ABI version `3`.
 
 ## Maven Package Access
 
@@ -148,5 +148,10 @@ For Cluster, keep `reactor.cache.redis.database=0`. If related keys must stay on
 | `reactor.cache.redis.topology` | `standalone` | Use `sentinel` or `cluster` for production HA/sharding. |
 | `reactor.cache.redis.nodes` | empty | Sentinel node list or Cluster startup node list. |
 | `reactor.cache.redis.sentinel.master-name` | empty | Required only for Sentinel. |
+| `reactor.cache.redis.sentinel.master-check-ms` | `1000` | How often Sentinel mode checks whether the master changed after failover. Lower for faster recovery; keep measured. |
 | `reactor.rust.jni.workers` | `1` | Good starting point for precomputed JSON reads. |
 | `reactor.rust.route-admission.*` | route-specific | Tune hot endpoints without increasing global queues. |
+
+## Production Config Copy
+
+The default `src/main/resources/rust-spring.properties` stays easy to run on a developer machine. For Kubernetes or container production, start from `src/main/resources/rust-spring.production.properties` instead. That file requires generated component/route indexes, disables runtime classpath scan fallback, enables the footprint gate in `enforce` mode and keeps native pools small by default.
