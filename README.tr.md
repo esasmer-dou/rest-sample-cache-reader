@@ -6,7 +6,7 @@
 
 Bu process içinde DB bağlantısı, scheduler, Java Redis client veya Dubbo yoktur. Java REST business handler şeklini korur; HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.2.1` ve `com.reactor:rust-java-rest:3.2.4` ile çalışacak şekilde güncellendi. Bu iki versiyonu birlikte kullan; Cluster Redis native ABI version `2`, Sentinel master failover refresh ise ABI version `3` gerektirir.
+Bu örnek `com.reactor:java-rust-cache:0.2.1` ve `com.reactor:rust-java-rest:3.2.5` ile çalışacak şekilde güncellendi. Bu iki versiyonu birlikte kullan; Cluster Redis native ABI version `2`, Sentinel master failover refresh ise ABI version `3` gerektirir ve REST paketi güncel native runtime resource çizgisini taşır.
 
 ## Maven Package Erişimi
 

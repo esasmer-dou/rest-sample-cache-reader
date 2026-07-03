@@ -6,7 +6,7 @@ Minimal Rust-Java REST sample that serves precomputed Redis JSON through `java-r
 
 There is no database connection, no scheduler, no Java Redis client, and no Dubbo in this process. Java owns the REST business handler shape; Rust owns HTTP I/O and Redis I/O.
 
-This sample is wired to `com.reactor:java-rust-cache:0.2.1` and `com.reactor:rust-java-rest:3.2.4`. Keep these versions aligned because Cluster uses Redis native ABI version `2` and Sentinel master failover refresh uses ABI version `3`.
+This sample is wired to `com.reactor:java-rust-cache:0.2.1` and `com.reactor:rust-java-rest:3.2.5`. Keep these versions aligned because Cluster uses Redis native ABI version `2`, Sentinel master failover refresh uses ABI version `3`, and the REST package carries the current native runtime resource line.
 
 ## Maven Package Access
 
