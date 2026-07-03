@@ -2,11 +2,52 @@
 
 [English](README.md) | [Turkish](README.tr.md)
 
-`java-rust-cache` ile Redis’te hazır duran JSON’u servis eden minimum Rust-Java REST örneği.
+`java-rust-cache` ile Redis'te hazır duran JSON'u servis eden minimum Rust-Java REST örneği.
 
-Bu process içinde DB bağlantısı, scheduler, Java Redis client veya Dubbo yoktur. Java REST business handler şeklini korur; HTTP I/O ve Redis I/O Rust tarafındadır.
+Bu süreçte DB bağlantısı, scheduler, Java Redis client veya Dubbo yoktur. Java tarafı REST handler
+şeklini korur. HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.2.1` ve `com.reactor:rust-java-rest:3.2.5` ile çalışacak şekilde güncellendi. Bu iki versiyonu birlikte kullan; Cluster Redis native ABI version `2`, Sentinel master failover refresh ise ABI version `3` gerektirir ve REST paketi güncel native runtime resource çizgisini taşır.
+Bu örnek `com.reactor:java-rust-cache:0.2.1` ve `com.reactor:rust-java-rest:3.2.5` ile çalışır.
+Bu iki sürümü birlikte kullanın. Cluster Redis native ABI sürümü `2` ister. Sentinel master failover
+refresh ise ABI sürümü `3` ister. REST paketi güncel native runtime resource çizgisini taşır.
+
+## Kopyala-Yapıştır: Redis Snapshot'ını REST API ile Oku
+
+Bu senaryoda Redis içinde müşteri snapshot'ı hazırdır. Snapshot'ı hazırlamak için önce
+`rest-sample-cache-writer` README dosyasındaki yazma örneğini bir kez çalıştırın.
+
+Sonra bu komutları `rest-sample-cache-reader` dizininde çalıştırın:
+
+```powershell
+docker start rs-cache-redis-test
+
+$env:GITHUB_PACKAGES_TOKEN="READ_PACKAGES_YETKILI_TOKEN"
+mvn -q clean package
+mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
+
+$cp = Get-Content target\cp.txt
+java "-Dserver.port=18080" `
+  "-Dreactor.cache.redis.host=127.0.0.1" `
+  "-Dreactor.cache.redis.port=16379" `
+  -cp "target\classes;$cp" `
+  com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
+```
+
+Ayrı bir terminal açın ve endpoint'leri deneyin:
+
+```powershell
+curl.exe http://127.0.0.1:18080/app/health
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/1
+curl.exe "http://127.0.0.1:18080/api/v1/cache/customers/by-customer-no?customerNo=CUST-1002"
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/segments/pilot
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/statuses/active
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/campaigns/retention/candidates
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/meta
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/cache-metrics
+```
+
+Bu örnekte handler DB'ye gitmez. Handler sadece cache abstraction çağırır. Redis I/O Rust native
+tarafta çalışır. HTTP response `RawResponse.json(bytes)` ile döner.
 
 ## Maven Package Erişimi
 

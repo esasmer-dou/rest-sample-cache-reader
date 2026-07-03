@@ -8,6 +8,43 @@ There is no database connection, no scheduler, no Java Redis client, and no Dubb
 
 This sample is wired to `com.reactor:java-rust-cache:0.2.1` and `com.reactor:rust-java-rest:3.2.5`. Keep these versions aligned because Cluster uses Redis native ABI version `2`, Sentinel master failover refresh uses ABI version `3`, and the REST package carries the current native runtime resource line.
 
+## Copy-Paste: Serve The Redis Snapshot Through REST
+
+In this scenario the customer snapshot already exists in Redis. Run the writer sample once first.
+
+Then run these commands from the `rest-sample-cache-reader` directory:
+
+```powershell
+docker start rs-cache-redis-test
+
+$env:GITHUB_PACKAGES_TOKEN="YOUR_TOKEN_WITH_READ_PACKAGES"
+mvn -q clean package
+mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
+
+$cp = Get-Content target\cp.txt
+java "-Dserver.port=18080" `
+  "-Dreactor.cache.redis.host=127.0.0.1" `
+  "-Dreactor.cache.redis.port=16379" `
+  -cp "target\classes;$cp" `
+  com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
+```
+
+Open another terminal and call the endpoints:
+
+```powershell
+curl.exe http://127.0.0.1:18080/app/health
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/1
+curl.exe "http://127.0.0.1:18080/api/v1/cache/customers/by-customer-no?customerNo=CUST-1002"
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/segments/pilot
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/statuses/active
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/campaigns/retention/candidates
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/meta
+curl.exe http://127.0.0.1:18080/api/v1/cache/customers/cache-metrics
+```
+
+The handler does not call the database. It calls the cache abstraction. Redis I/O runs in Rust
+native code. The HTTP response is returned with `RawResponse.json(bytes)`.
+
 ## Maven Package Access
 
 This sample pulls `rust-java-rest` and `java-rust-cache` from GitHub Packages. Maven must authenticate before it can download those packages; this is GitHub Packages' normal access model.
