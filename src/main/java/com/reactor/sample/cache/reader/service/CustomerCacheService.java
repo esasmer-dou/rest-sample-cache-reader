@@ -2,9 +2,9 @@ package com.reactor.sample.cache.reader.service;
 
 import com.reactor.rust.cache.api.CacheReadResult;
 import com.reactor.rust.cache.core.RustCache;
+import com.reactor.rust.cache.projection.CacheReaderProjectionSettings;
 import com.reactor.rust.cache.versioned.VersionedJsonCacheReader;
 import com.reactor.sample.cache.reader.config.CacheReaderProperties;
-import com.reactor.sample.cache.reader.config.CacheReaderProjectionSettings;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -17,7 +17,7 @@ public final class CustomerCacheService {
     private final Map<String, VersionedJsonCacheReader> readers;
 
     public CustomerCacheService(RustCache cache, CacheReaderProperties properties) {
-        this(cache, properties, CacheReaderProjectionSettings.resolveAll(properties));
+        this(cache, properties, CacheReaderProjectionSettings.resolveAll(properties, "sample.cache.customer"));
     }
 
     public CustomerCacheService(

@@ -1,5 +1,6 @@
 package com.reactor.sample.cache.reader.config;
 
+import com.reactor.rust.cache.projection.CacheReaderProjectionSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,8 @@ class CacheReaderProjectionSettingsTest {
 
     @Test
     void resolvesProjectionNamespacesFromClasspathDefaults() {
-        List<CacheReaderProjectionSettings> settings = CacheReaderProjectionSettings.resolveAll(CacheReaderProperties.load());
+        List<CacheReaderProjectionSettings> settings =
+                CacheReaderProjectionSettings.resolveAll(CacheReaderProperties.load(), "sample.cache.customer");
 
         assertEquals(5, settings.size());
         assertEquals("detail", settings.get(0).name());
@@ -29,7 +31,8 @@ class CacheReaderProjectionSettingsTest {
     void resolvesProjectionListFromRuntimeOverride() {
         System.setProperty("sample.cache.customer.projections", "detail,campaign,detail");
 
-        List<CacheReaderProjectionSettings> settings = CacheReaderProjectionSettings.resolveAll(CacheReaderProperties.load());
+        List<CacheReaderProjectionSettings> settings =
+                CacheReaderProjectionSettings.resolveAll(CacheReaderProperties.load(), "sample.cache.customer");
 
         assertEquals(2, settings.size());
         assertEquals("detail", settings.get(0).name());
@@ -41,7 +44,8 @@ class CacheReaderProjectionSettingsTest {
         System.setProperty("sample.cache.customer.namespace", "crm.customer.prod");
         System.setProperty("sample.cache.customer.projections", "detail,campaign");
 
-        List<CacheReaderProjectionSettings> settings = CacheReaderProjectionSettings.resolveAll(CacheReaderProperties.load());
+        List<CacheReaderProjectionSettings> settings =
+                CacheReaderProjectionSettings.resolveAll(CacheReaderProperties.load(), "sample.cache.customer");
 
         assertEquals("crm.customer.prod.detail", settings.get(0).namespace());
         assertEquals("crm.customer.prod.campaign", settings.get(1).namespace());

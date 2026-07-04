@@ -8,20 +8,21 @@ Bu uygulama Redis'ten okur ve HTTP JSON döner.
 
 DB bağlantısı yoktur. Scheduler yoktur. Java Redis client yoktur. Dubbo yoktur. Java REST handler'ı yönetir. HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.2.1` ve `com.reactor:rust-java-rest:3.2.5` ile çalışır.
+Bu örnek `com.reactor:java-rust-cache:0.2.2` ve `com.reactor:rust-java-rest:3.2.6` ile çalışır.
 
 ## İçindekiler
 
 1. [Kopyala-Yapıştır: Redis Snapshot'ını REST API ile Oku](#kopyala-yapıştır-redis-snapshotını-rest-api-ile-oku)
 2. [Maven Package Erişimi](#maven-package-erişimi)
 3. [Gerçek Senaryo](#gerçek-senaryo)
-4. [Reader TTL ve Namespace Reçeteleri](#reader-ttl-ve-namespace-reçeteleri)
-5. [Endpoint'ler](#endpointler)
-6. [Production Redis Topolojisi](#production-redis-topolojisi)
-7. [Bu Akış Neden Doğru?](#bu-akış-neden-doğru)
-8. [Ana Property'ler](#ana-propertyler)
-9. [Sözlük](#sözlük)
-10. [Production Config Kopyası](#production-config-kopyası)
+4. [Deklaratif Projection Config](#deklaratif-projection-config)
+5. [Reader TTL ve Namespace Reçeteleri](#reader-ttl-ve-namespace-reçeteleri)
+6. [Endpoint'ler](#endpointler)
+7. [Production Redis Topolojisi](#production-redis-topolojisi)
+8. [Bu Akış Neden Doğru?](#bu-akış-neden-doğru)
+9. [Ana Property'ler](#ana-propertyler)
+10. [Sözlük](#sözlük)
+11. [Production Config Kopyası](#production-config-kopyası)
 
 ## Kopyala-Yapıştır: Redis Snapshot'ını REST API ile Oku
 
@@ -132,6 +133,32 @@ sample.cache.customer.projections=detail,campaign
 ```
 
 Bu değer kodu değiştirmeden reader cache yüzeyini sadeleştirir. Ancak endpoint hâlâ çağrılırsa ve ilgili projection reader içinde yoksa reader kontrollü cache-not-ready/miss response döner. Production'da en temiz kullanım, endpoint seti ile projection setini aynı use case'e göre birlikte seçmektir.
+
+## Deklaratif Projection Config
+
+Projection reader config artık `java-rust-cache` tarafından çözülür:
+
+```java
+List<CacheReaderProjectionSettings> projections =
+        CacheReaderProjectionSettings.resolveAll(properties, "sample.cache.customer");
+```
+
+Library şunları çözer:
+
+- `sample.cache.customer.projections` içindeki aktif projection adları
+- `sample.cache.customer.detail.namespace` gibi projection bazlı namespace değerleri
+- `sample.cache.customer.namespace=crm.customer` gibi base namespace genişletmesi
+
+Hangi endpoint'in hangi projection'ı okuyacağı yine servis kodunda açık kalır:
+
+```java
+public RawResponse campaignCandidates(String campaign) {
+    return RawResponse.json(cacheService.campaignCandidates(campaign));
+}
+```
+
+BEST: writer ile aynı config çözümünü kullanmak için library'yi kullanın. Endpoint davranışını ve
+cache miss kararını REST servisinde explicit bırakın.
 
 ## Reader TTL ve Namespace Reçeteleri
 

@@ -8,20 +8,21 @@ This process reads Redis and returns HTTP JSON.
 
 It has no database. It has no scheduler. It has no Java Redis client. It has no Dubbo. Java owns the REST handler. Rust owns HTTP I/O and Redis I/O.
 
-This sample uses `com.reactor:java-rust-cache:0.2.1` and `com.reactor:rust-java-rest:3.2.5`.
+This sample uses `com.reactor:java-rust-cache:0.2.2` and `com.reactor:rust-java-rest:3.2.6`.
 
 ## Contents
 
 1. [Copy-Paste: Serve The Redis Snapshot Through REST](#copy-paste-serve-the-redis-snapshot-through-rest)
 2. [Maven Package Access](#maven-package-access)
 3. [Real Scenario](#real-scenario)
-4. [Reader TTL And Namespace Recipes](#reader-ttl-and-namespace-recipes)
-5. [Endpoints](#endpoints)
-6. [Production Redis Topology](#production-redis-topology)
-7. [Why This Shape](#why-this-shape)
-8. [Main Properties](#main-properties)
-9. [Glossary](#glossary)
-10. [Production Config Copy](#production-config-copy)
+4. [Declarative Projection Config](#declarative-projection-config)
+5. [Reader TTL And Namespace Recipes](#reader-ttl-and-namespace-recipes)
+6. [Endpoints](#endpoints)
+7. [Production Redis Topology](#production-redis-topology)
+8. [Why This Shape](#why-this-shape)
+9. [Main Properties](#main-properties)
+10. [Glossary](#glossary)
+11. [Production Config Copy](#production-config-copy)
 
 ## Copy-Paste: Serve The Redis Snapshot Through REST
 
@@ -131,6 +132,32 @@ sample.cache.customer.projections=detail,campaign
 ```
 
 This reduces reader setup without code changes. If an endpoint is still called for a projection that is not configured, the reader returns a controlled cache-not-ready/miss response. In production, keep the endpoint set and projection set aligned with the same use case.
+
+## Declarative Projection Config
+
+Projection reader config is resolved by `java-rust-cache`:
+
+```java
+List<CacheReaderProjectionSettings> projections =
+        CacheReaderProjectionSettings.resolveAll(properties, "sample.cache.customer");
+```
+
+The library resolves:
+
+- active projection names from `sample.cache.customer.projections`
+- projection-specific namespaces such as `sample.cache.customer.detail.namespace`
+- base namespace expansion such as `sample.cache.customer.namespace=crm.customer`
+
+Your service still decides which endpoint reads which projection:
+
+```java
+public RawResponse campaignCandidates(String campaign) {
+    return RawResponse.json(cacheService.campaignCandidates(campaign));
+}
+```
+
+BEST: use the library to keep config parsing identical to the writer. Keep endpoint behavior and
+miss handling explicit in the REST service.
 
 ## Reader TTL And Namespace Recipes
 
