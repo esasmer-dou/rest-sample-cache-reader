@@ -4,72 +4,85 @@ import com.reactor.rust.cache.api.CacheReadResult;
 import com.reactor.rust.cache.core.RustCache;
 import com.reactor.rust.cache.versioned.VersionedJsonCacheReader;
 import com.reactor.sample.cache.reader.config.CacheReaderProperties;
+import com.reactor.sample.cache.reader.config.CacheReaderProjectionSettings;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public final class CustomerCacheService {
 
     private final RustCache cache;
-    private final VersionedJsonCacheReader details;
-    private final VersionedJsonCacheReader segments;
-    private final VersionedJsonCacheReader statuses;
-    private final VersionedJsonCacheReader campaigns;
-    private final VersionedJsonCacheReader meta;
+    private final Map<String, VersionedJsonCacheReader> readers;
 
     public CustomerCacheService(RustCache cache, CacheReaderProperties properties) {
+        this(cache, properties, CacheReaderProjectionSettings.resolveAll(properties));
+    }
+
+    public CustomerCacheService(
+            RustCache cache,
+            CacheReaderProperties properties,
+            List<CacheReaderProjectionSettings> projectionSettings) {
         this.cache = cache;
         long versionCacheMillis = properties.getLong("sample.cache.customer.version-cache-ms");
-        this.details = cache.versionedJsonReader(namespace(properties, "detail"), versionCacheMillis);
-        this.segments = cache.versionedJsonReader(namespace(properties, "segment"), versionCacheMillis);
-        this.statuses = cache.versionedJsonReader(namespace(properties, "status"), versionCacheMillis);
-        this.campaigns = cache.versionedJsonReader(namespace(properties, "campaign"), versionCacheMillis);
-        this.meta = cache.versionedJsonReader(namespace(properties, "meta"), versionCacheMillis);
+        this.readers = createReaders(cache, projectionSettings, versionCacheMillis);
     }
 
     public CacheReadResult customer(long id) {
-        return details.getById(id);
+        VersionedJsonCacheReader reader = reader("detail");
+        return reader == null ? CacheReadResult.cacheNotReady() : reader.getById(id);
     }
 
     public CacheReadResult customersBySegment(String segment) {
-        return segments.getIndex("segment", segment == null || segment.isBlank() ? "standard" : segment);
+        VersionedJsonCacheReader reader = reader("segment");
+        return reader == null
+                ? CacheReadResult.cacheNotReady()
+                : reader.getIndex("segment", segment == null || segment.isBlank() ? "standard" : segment);
     }
 
     public CacheReadResult customerByCustomerNo(String customerNo) {
-        return details.getIndex("customer-no", customerNo == null ? "" : customerNo.trim());
+        VersionedJsonCacheReader reader = reader("detail");
+        return reader == null
+                ? CacheReadResult.cacheNotReady()
+                : reader.getIndex("customer-no", customerNo == null ? "" : customerNo.trim());
     }
 
     public CacheReadResult customersByStatus(String status) {
-        return statuses.getIndex("status", status == null || status.isBlank() ? "active" : status);
+        VersionedJsonCacheReader reader = reader("status");
+        return reader == null
+                ? CacheReadResult.cacheNotReady()
+                : reader.getIndex("status", status == null || status.isBlank() ? "active" : status);
     }
 
     public CacheReadResult campaignCandidates(String campaign) {
-        return campaigns.getIndex("campaign", campaign == null || campaign.isBlank() ? "retention" : campaign);
+        VersionedJsonCacheReader reader = reader("campaign");
+        return reader == null
+                ? CacheReadResult.cacheNotReady()
+                : reader.getIndex("campaign", campaign == null || campaign.isBlank() ? "retention" : campaign);
     }
 
     public CacheReadResult meta() {
-        return meta.getMeta();
+        VersionedJsonCacheReader reader = reader("meta");
+        return reader == null ? CacheReadResult.cacheNotReady() : reader.getMeta();
     }
 
     public String metricsJson() {
         return cache.metricsJson();
     }
 
-    private static String namespace(CacheReaderProperties properties, String projection) {
-        String specificKey = "sample.cache.customer." + projection + ".namespace";
-        String specificRuntime = properties.getRuntimeOverride(specificKey);
-        if (hasText(specificRuntime)) {
-            return specificRuntime;
+    private static Map<String, VersionedJsonCacheReader> createReaders(
+            RustCache cache,
+            List<CacheReaderProjectionSettings> projectionSettings,
+            long versionCacheMillis) {
+        Map<String, VersionedJsonCacheReader> created = new LinkedHashMap<>();
+        for (CacheReaderProjectionSettings settings : projectionSettings) {
+            created.put(settings.name(), cache.versionedJsonReader(settings.namespace(), versionCacheMillis));
         }
-        String baseRuntime = properties.getRuntimeOverride("sample.cache.customer.namespace");
-        if (hasText(baseRuntime)) {
-            return baseRuntime + "." + projection;
-        }
-        String specificFile = properties.getFileOptional(specificKey);
-        if (hasText(specificFile)) {
-            return specificFile;
-        }
-        return properties.get("sample.cache.customer.namespace") + "." + projection;
+        return Collections.unmodifiableMap(created);
     }
 
-    private static boolean hasText(String value) {
-        return value != null && !value.isBlank();
+    private VersionedJsonCacheReader reader(String projection) {
+        return readers.get(projection);
     }
 }

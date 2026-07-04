@@ -124,6 +124,14 @@ The reader intentionally uses the same projection split as the writer:
 
 Keep one namespace per projection when TTLs differ. Do not point all endpoints to the same namespace if the writer publishes separate projection snapshots.
 
+`sample.cache.customer.projections` controls which projection readers are created. If the writer publishes only `detail,campaign`, keep the reader aligned:
+
+```properties
+sample.cache.customer.projections=detail,campaign
+```
+
+This reduces reader setup without code changes. If an endpoint is still called for a projection that is not configured, the reader returns a controlled cache-not-ready/miss response. In production, keep the endpoint set and projection set aligned with the same use case.
+
 ## Reader TTL And Namespace Recipes
 
 The reader does not set Redis data TTL. TTL is decided by the writer. The reader must use the same namespace names and tune only how long it caches the current-version pointer with `sample.cache.customer.version-cache-ms`.
@@ -288,6 +296,7 @@ For Cluster, keep `reactor.cache.redis.database=0`. If related keys must stay on
 |---|---:|---|---|
 | `reactor.runtime.profile` | `micro-rest` | Starts the low-memory REST profile. | Keep for Redis-backed read APIs. |
 | `sample.cache.customer.namespace` | `crm.customer` | Base namespace for all projections. | Set when writer uses a different base namespace. |
+| `sample.cache.customer.projections` | `detail,segment,status,campaign,meta` | Selects projection readers created at startup. | Narrow it when this reader only serves selected read models. |
 | `sample.cache.customer.detail.namespace` | `crm.customer.detail` | Reads customer detail data. | Must match `sample.writer.detail.namespace`. |
 | `sample.cache.customer.segment.namespace` | `crm.customer.segment` | Reads segment list data. | Must match `sample.writer.segment.namespace`. |
 | `sample.cache.customer.status.namespace` | `crm.customer.status` | Reads status list data. | Must match `sample.writer.status.namespace`. |

@@ -125,6 +125,14 @@ Reader, writer ile aynı projection ayrımını kullanır:
 
 TTL değerleri farklıysa her veri tipini ayrı namespace’te tut. Writer ayrı projection snapshot publish ediyorsa reader endpoint’lerini tek namespace’e yönlendirme.
 
+`sample.cache.customer.projections` reader tarafında hangi projection reader'larının kurulacağını belirler. Writer sadece `detail,campaign` publish ediyorsa reader tarafını da aynı şekilde daraltabilirsin:
+
+```properties
+sample.cache.customer.projections=detail,campaign
+```
+
+Bu değer kodu değiştirmeden reader cache yüzeyini sadeleştirir. Ancak endpoint hâlâ çağrılırsa ve ilgili projection reader içinde yoksa reader kontrollü cache-not-ready/miss response döner. Production'da en temiz kullanım, endpoint seti ile projection setini aynı use case'e göre birlikte seçmektir.
+
 ## Reader TTL ve Namespace Reçeteleri
 
 Reader Redis data TTL değerini belirlemez. TTL kararı writer tarafındadır. Reader aynı namespace adlarını kullanmalı ve sadece current-version pointer değerini ne kadar cache’leyeceğini `sample.cache.customer.version-cache-ms` ile ayarlamalıdır.
@@ -289,6 +297,7 @@ Cluster’da `reactor.cache.redis.database=0` kalmalıdır. Birbiriyle ilişkili
 |---|---:|---|---|
 | `reactor.runtime.profile` | `micro-rest` | Düşük memory REST profilini açar. | Redis-backed read API için koru. |
 | `sample.cache.customer.namespace` | `crm.customer` | Tüm projection'lar için base namespace verir. | Writer farklı base namespace kullanıyorsa değiştir. |
+| `sample.cache.customer.projections` | `detail,segment,status,campaign,meta` | Reader içinde kurulacak projection listesidir. | Sadece kullanılan read model'leri okumak istiyorsan daralt. |
 | `sample.cache.customer.detail.namespace` | `crm.customer.detail` | Müşteri detayı okur. | `sample.writer.detail.namespace` ile aynı olmalı. |
 | `sample.cache.customer.segment.namespace` | `crm.customer.segment` | Segment listesi okur. | `sample.writer.segment.namespace` ile aynı olmalı. |
 | `sample.cache.customer.status.namespace` | `crm.customer.status` | Status listesi okur. | `sample.writer.status.namespace` ile aynı olmalı. |

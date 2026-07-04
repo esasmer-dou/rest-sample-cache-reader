@@ -11,6 +11,7 @@ class CacheReaderPropertiesTest {
         CacheReaderProperties properties = CacheReaderProperties.load();
 
         assertEquals("crm.customer", properties.get("sample.cache.customer.namespace"));
+        assertEquals("detail,segment,status,campaign,meta", properties.get("sample.cache.customer.projections"));
         assertEquals("crm.customer.detail", properties.get("sample.cache.customer.detail.namespace"));
         assertEquals("crm.customer.segment", properties.get("sample.cache.customer.segment.namespace"));
         assertEquals("crm.customer.status", properties.get("sample.cache.customer.status.namespace"));
