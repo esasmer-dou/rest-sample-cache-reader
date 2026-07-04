@@ -4,9 +4,24 @@
 
 Minimal Rust-Java REST sample that serves precomputed Redis JSON through `java-rust-cache`.
 
-There is no database connection, no scheduler, no Java Redis client, and no Dubbo in this process. Java owns the REST business handler shape; Rust owns HTTP I/O and Redis I/O.
+This process reads Redis and returns HTTP JSON.
 
-This sample is wired to `com.reactor:java-rust-cache:0.2.1` and `com.reactor:rust-java-rest:3.2.5`. Keep these versions aligned because Cluster uses Redis native ABI version `2`, Sentinel master failover refresh uses ABI version `3`, and the REST package carries the current native runtime resource line.
+It has no database. It has no scheduler. It has no Java Redis client. It has no Dubbo. Java owns the REST handler. Rust owns HTTP I/O and Redis I/O.
+
+This sample uses `com.reactor:java-rust-cache:0.2.1` and `com.reactor:rust-java-rest:3.2.5`.
+
+## Contents
+
+1. [Copy-Paste: Serve The Redis Snapshot Through REST](#copy-paste-serve-the-redis-snapshot-through-rest)
+2. [Maven Package Access](#maven-package-access)
+3. [Real Scenario](#real-scenario)
+4. [Reader TTL And Namespace Recipes](#reader-ttl-and-namespace-recipes)
+5. [Endpoints](#endpoints)
+6. [Production Redis Topology](#production-redis-topology)
+7. [Why This Shape](#why-this-shape)
+8. [Main Properties](#main-properties)
+9. [Glossary](#glossary)
+10. [Production Config Copy](#production-config-copy)
 
 ## Copy-Paste: Serve The Redis Snapshot Through REST
 
@@ -269,24 +284,39 @@ For Cluster, keep `reactor.cache.redis.database=0`. If related keys must stay on
 
 ## Main Properties
 
-| Property | Default | Use when |
-|---|---:|---|
-| `reactor.runtime.profile` | `micro-rest` | Low-RSS REST profile for cache-backed reads. |
-| `sample.cache.customer.namespace` | `crm.customer` | Base namespace. Runtime override creates `<base>.detail`, `<base>.segment`, `<base>.status`, `<base>.campaign`, and `<base>.meta` unless projection namespaces are set explicitly. |
-| `sample.cache.customer.detail.namespace` | `crm.customer.detail` | Must match `sample.writer.detail.namespace`. |
-| `sample.cache.customer.segment.namespace` | `crm.customer.segment` | Must match `sample.writer.segment.namespace`. |
-| `sample.cache.customer.status.namespace` | `crm.customer.status` | Must match `sample.writer.status.namespace`. |
-| `sample.cache.customer.campaign.namespace` | `crm.customer.campaign` | Must match `sample.writer.campaign.namespace`. |
-| `sample.cache.customer.meta.namespace` | `crm.customer.meta` | Must match `sample.writer.meta.namespace`. |
-| `sample.cache.customer.version-cache-ms` | `1000` | How long the reader keeps the current snapshot pointer in Java memory. Lower for faster publish visibility; raise for very hot read paths. |
-| `reactor.cache.redis.read-connections` | `2` | Increase only if Redis read latency is proven bottleneck. |
-| `reactor.cache.redis.max-read-inflight` | `128` | Bounds concurrent Redis reads. Lower for memory-first pods. |
-| `reactor.cache.redis.topology` | `standalone` | Use `sentinel` or `cluster` for production HA/sharding. |
-| `reactor.cache.redis.nodes` | empty | Sentinel node list or Cluster startup node list. |
-| `reactor.cache.redis.sentinel.master-name` | empty | Required only for Sentinel. |
-| `reactor.cache.redis.sentinel.master-check-ms` | `1000` | How often Sentinel mode checks whether the master changed after failover. Lower for faster recovery; keep measured. |
-| `reactor.rust.jni.workers` | `1` | Good starting point for precomputed JSON reads. |
-| `reactor.rust.route-admission.*` | route-specific | Tune hot endpoints without increasing global queues. |
+| Property | Default | What it does | When to change |
+|---|---:|---|---|
+| `reactor.runtime.profile` | `micro-rest` | Starts the low-memory REST profile. | Keep for Redis-backed read APIs. |
+| `sample.cache.customer.namespace` | `crm.customer` | Base namespace for all projections. | Set when writer uses a different base namespace. |
+| `sample.cache.customer.detail.namespace` | `crm.customer.detail` | Reads customer detail data. | Must match `sample.writer.detail.namespace`. |
+| `sample.cache.customer.segment.namespace` | `crm.customer.segment` | Reads segment list data. | Must match `sample.writer.segment.namespace`. |
+| `sample.cache.customer.status.namespace` | `crm.customer.status` | Reads status list data. | Must match `sample.writer.status.namespace`. |
+| `sample.cache.customer.campaign.namespace` | `crm.customer.campaign` | Reads campaign candidate data. | Must match `sample.writer.campaign.namespace`. |
+| `sample.cache.customer.meta.namespace` | `crm.customer.meta` | Reads snapshot metadata. | Must match `sample.writer.meta.namespace`. |
+| `sample.cache.customer.version-cache-ms` | `1000` | Caches the Redis current-version pointer in Java memory. | Lower for faster publish visibility. Raise for very hot reads. |
+| `reactor.cache.redis.read-connections` | `2` | Opens native Redis read connections. | Increase only if Redis read latency is proven. |
+| `reactor.cache.redis.max-read-inflight` | `128` | Bounds concurrent Redis reads. | Lower for memory-first pods. |
+| `reactor.cache.redis.topology` | `standalone` | Selects Redis mode. | Use `sentinel` or `cluster` in production. |
+| `reactor.cache.redis.nodes` | empty | Lists Sentinel or Cluster nodes. | Set when topology is `sentinel` or `cluster`. |
+| `reactor.cache.redis.sentinel.master-name` | empty | Names the Sentinel master. | Required for Sentinel. |
+| `reactor.cache.redis.sentinel.master-check-ms` | `1000` | Checks Sentinel master changes. | Lower only if measured recovery is too slow. |
+| `reactor.rust.jni.workers` | `1` | Runs Java REST handlers. | Keep low for precomputed JSON reads. |
+| `reactor.rust.route-admission.*` | route-specific | Limits hot endpoints. | Tune a route before raising global queues. |
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| TTL | Time to live. The writer sets it on Redis keys. |
+| Version cache | A short Java-side cache of the Redis `current` pointer. It is not Redis TTL. |
+| Projection | A ready read model for one endpoint family. |
+| Namespace | Redis key prefix for one projection. |
+| RawResponse | A response that sends prepared JSON bytes without rebuilding DTOs. |
+| Cache miss | Redis does not have the requested data. |
+| p99 | The slowest 1 percent latency line. If p99 rises, tail latency is bad. |
+| 503 | Controlled overload response. It protects the pod instead of growing queues. |
+| Sentinel | Redis high-availability mode with primary failover. |
+| Cluster | Redis sharding mode. |
 
 ## Production Config Copy
 

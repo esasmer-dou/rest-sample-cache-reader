@@ -4,12 +4,24 @@
 
 `java-rust-cache` ile Redis'te hazır duran JSON'u servis eden minimum Rust-Java REST örneği.
 
-Bu süreçte DB bağlantısı, scheduler, Java Redis client veya Dubbo yoktur. Java tarafı REST handler
-şeklini korur. HTTP I/O ve Redis I/O Rust tarafındadır.
+Bu uygulama Redis'ten okur ve HTTP JSON döner.
+
+DB bağlantısı yoktur. Scheduler yoktur. Java Redis client yoktur. Dubbo yoktur. Java REST handler'ı yönetir. HTTP I/O ve Redis I/O Rust tarafındadır.
 
 Bu örnek `com.reactor:java-rust-cache:0.2.1` ve `com.reactor:rust-java-rest:3.2.5` ile çalışır.
-Bu iki sürümü birlikte kullanın. Cluster Redis native ABI sürümü `2` ister. Sentinel master failover
-refresh ise ABI sürümü `3` ister. REST paketi güncel native runtime resource çizgisini taşır.
+
+## İçindekiler
+
+1. [Kopyala-Yapıştır: Redis Snapshot'ını REST API ile Oku](#kopyala-yapıştır-redis-snapshotını-rest-api-ile-oku)
+2. [Maven Package Erişimi](#maven-package-erişimi)
+3. [Gerçek Senaryo](#gerçek-senaryo)
+4. [Reader TTL ve Namespace Reçeteleri](#reader-ttl-ve-namespace-reçeteleri)
+5. [Endpoint'ler](#endpointler)
+6. [Production Redis Topolojisi](#production-redis-topolojisi)
+7. [Bu Akış Neden Doğru?](#bu-akış-neden-doğru)
+8. [Ana Property'ler](#ana-propertyler)
+9. [Sözlük](#sözlük)
+10. [Production Config Kopyası](#production-config-kopyası)
 
 ## Kopyala-Yapıştır: Redis Snapshot'ını REST API ile Oku
 
@@ -271,26 +283,41 @@ Cluster’da `reactor.cache.redis.database=0` kalmalıdır. Birbiriyle ilişkili
 | Route admission | Düşük memory pod’u burst altında korur | Saturated route kontrollü `503` dönebilir |
 | Java Redis client yok | Classpath küçülür, Redis I/O Rust’a geçer | Redis feature set bilinçli olarak minimaldir |
 
-## Ana Property’ler
+## Ana Property'ler
 
-| Property | Default | Ne zaman değiştirirsin? |
-|---|---:|---|
-| `reactor.runtime.profile` | `micro-rest` | Cache-backed read endpointler için düşük RSS REST profili. |
-| `sample.cache.customer.namespace` | `crm.customer` | Base namespace. Runtime override verirsen projection namespace açıkça verilmediği sürece `<base>.detail`, `<base>.segment`, `<base>.status`, `<base>.campaign` ve `<base>.meta` üretilir. |
-| `sample.cache.customer.detail.namespace` | `crm.customer.detail` | `sample.writer.detail.namespace` ile aynı olmalı. |
-| `sample.cache.customer.segment.namespace` | `crm.customer.segment` | `sample.writer.segment.namespace` ile aynı olmalı. |
-| `sample.cache.customer.status.namespace` | `crm.customer.status` | `sample.writer.status.namespace` ile aynı olmalı. |
-| `sample.cache.customer.campaign.namespace` | `crm.customer.campaign` | `sample.writer.campaign.namespace` ile aynı olmalı. |
-| `sample.cache.customer.meta.namespace` | `crm.customer.meta` | `sample.writer.meta.namespace` ile aynı olmalı. |
-| `sample.cache.customer.version-cache-ms` | `1000` | Reader’ın current snapshot pointer’ını Java memory’de ne kadar tutacağını belirler. Yeni publish daha hızlı görünsün istiyorsan düşür; çok hot read path’lerde Redis lookup azaltmak için artır. |
-| `reactor.cache.redis.read-connections` | `2` | Redis read latency gerçek darboğaz ise ölçerek artır. |
-| `reactor.cache.redis.max-read-inflight` | `128` | Eşzamanlı Redis read sayısını sınırlar. Memory-first pod’da düşür. |
-| `reactor.cache.redis.topology` | `standalone` | Production HA/sharding için `sentinel` veya `cluster` seç. |
-| `reactor.cache.redis.nodes` | empty | Sentinel node listesi veya Cluster startup node listesi. |
-| `reactor.cache.redis.sentinel.master-name` | empty | Sadece Sentinel için zorunludur. |
-| `reactor.cache.redis.sentinel.master-check-ms` | `1000` | Sentinel modunda failover sonrası master değişimini ne sıklıkla kontrol edeceğini belirler. Daha hızlı toparlanma için düşür; ölçmeden agresif azaltma. |
-| `reactor.rust.jni.workers` | `1` | Precomputed JSON read için iyi başlangıçtır. |
-| `reactor.rust.route-admission.*` | route bazlı | Global queue büyütmeden hot endpoint’i ayrı tune etmek için kullan. |
+| Property | Default | Ne işe yarar? | Ne zaman değiştirirsin? |
+|---|---:|---|---|
+| `reactor.runtime.profile` | `micro-rest` | Düşük memory REST profilini açar. | Redis-backed read API için koru. |
+| `sample.cache.customer.namespace` | `crm.customer` | Tüm projection'lar için base namespace verir. | Writer farklı base namespace kullanıyorsa değiştir. |
+| `sample.cache.customer.detail.namespace` | `crm.customer.detail` | Müşteri detayı okur. | `sample.writer.detail.namespace` ile aynı olmalı. |
+| `sample.cache.customer.segment.namespace` | `crm.customer.segment` | Segment listesi okur. | `sample.writer.segment.namespace` ile aynı olmalı. |
+| `sample.cache.customer.status.namespace` | `crm.customer.status` | Status listesi okur. | `sample.writer.status.namespace` ile aynı olmalı. |
+| `sample.cache.customer.campaign.namespace` | `crm.customer.campaign` | Kampanya adaylarını okur. | `sample.writer.campaign.namespace` ile aynı olmalı. |
+| `sample.cache.customer.meta.namespace` | `crm.customer.meta` | Snapshot metadata okur. | `sample.writer.meta.namespace` ile aynı olmalı. |
+| `sample.cache.customer.version-cache-ms` | `1000` | Redis current-version pointer'ını Java memory'de kısa süre tutar. | Yeni publish hızlı görünsün istiyorsan düşür. Hot read için artır. |
+| `reactor.cache.redis.read-connections` | `2` | Native Redis read connection açar. | Sadece Redis read latency darboğaz ise artır. |
+| `reactor.cache.redis.max-read-inflight` | `128` | Aynı anda kaç Redis read olacağını sınırlar. | Memory-first pod için düşür. |
+| `reactor.cache.redis.topology` | `standalone` | Redis çalışma modunu seçer. | Production için `sentinel` veya `cluster` kullan. |
+| `reactor.cache.redis.nodes` | empty | Sentinel veya Cluster node listesidir. | Topology `sentinel` veya `cluster` ise doldur. |
+| `reactor.cache.redis.sentinel.master-name` | empty | Sentinel master adıdır. | Sentinel kullanıyorsan zorunludur. |
+| `reactor.cache.redis.sentinel.master-check-ms` | `1000` | Sentinel master değişimini kontrol eder. | Failover toparlanması ölçümde yavaşsa düşür. |
+| `reactor.rust.jni.workers` | `1` | Java REST handler'larını çalıştırır. | Precomputed JSON read için düşük tut. |
+| `reactor.rust.route-admission.*` | route bazlı | Yoğun endpointleri sınırlar. | Global queue artırmadan önce route bazında tune et. |
+
+## Sözlük
+
+| Terim | Anlamı |
+|---|---|
+| TTL | Redis key yaşam süresidir. Bunu writer belirler. |
+| Version cache | Redis `current` pointer değerinin Java tarafında kısa süre tutulmasıdır. Redis TTL değildir. |
+| Projection | Bir endpoint ailesi için hazır okuma modelidir. |
+| Namespace | Bir projection için Redis key ön ekidir. |
+| RawResponse | Hazır JSON byte verisini DTO kurmadan dönen response tipidir. |
+| Cache miss | Redis'te istenen veri yoktur. |
+| p99 | En yavaş yüzde 1 çağrının latency çizgisidir. p99 yükselirse tail latency kötüdür. |
+| 503 | Kontrollü overload response kodudur. Queue büyütmek yerine pod'u korur. |
+| Sentinel | Redis high availability modudur. Primary failover yönetir. |
+| Cluster | Redis sharding modudur. Veri node'lara bölünür. |
 
 ## Production Config Kopyası
 
