@@ -8,7 +8,7 @@ Bu uygulama Redis'ten okur ve HTTP JSON döner.
 
 DB bağlantısı yoktur. Scheduler yoktur. Java Redis client yoktur. Dubbo yoktur. Java REST handler'ı yönetir. HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.2.2` ve `com.reactor:rust-java-rest:3.2.6` ile çalışır.
+Bu örnek `com.reactor:java-rust-cache:0.2.3` ve `com.reactor:rust-java-rest:3.2.6` ile çalışır.
 
 ## İçindekiler
 
