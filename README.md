@@ -94,8 +94,102 @@ Typical flow:
 1. `rest-sample-cache-writer` writes a new versioned snapshot.
 2. This reader receives HTTP requests.
 3. It calls one high-level cache method such as `customer(id)` or `campaignCandidates("retention")`.
-4. The cache library resolves current version, Redis key, and miss handling.
+4. The cache library resolves the current version in the matching projection namespace.
 5. The handler returns `RawResponse.json(bytes)` without rebuilding a Java DTO graph.
+
+The reader intentionally uses the same projection split as the writer:
+
+| Endpoint family | Reader namespace | Writer property that must match |
+|---|---|---|
+| Customer detail and customer number lookup | `sample.cache.customer.detail.namespace` | `sample.writer.detail.namespace` |
+| Segment list | `sample.cache.customer.segment.namespace` | `sample.writer.segment.namespace` |
+| Status list | `sample.cache.customer.status.namespace` | `sample.writer.status.namespace` |
+| Campaign candidates | `sample.cache.customer.campaign.namespace` | `sample.writer.campaign.namespace` |
+| Metadata | `sample.cache.customer.meta.namespace` | `sample.writer.meta.namespace` |
+
+Keep one namespace per projection when TTLs differ. Do not point all endpoints to the same namespace if the writer publishes separate projection snapshots.
+
+## Reader TTL And Namespace Recipes
+
+The reader does not set Redis data TTL. TTL is decided by the writer. The reader must use the same namespace names and tune only how long it caches the current-version pointer with `sample.cache.customer.version-cache-ms`.
+
+### Scenario: Use The Writer Base Namespace Override
+
+If the writer runs with this override:
+
+```powershell
+java "-Dsample.writer.namespace=crm.customer.prod" `
+  "-Dsample.writer.cache-ttl-ms=900000" `
+  -cp "target\classes;$cp" `
+  com.reactor.sample.cache.writer.app.RestSampleCacheWriterApplication
+```
+
+Start the reader with the same base namespace:
+
+```powershell
+java "-Dsample.cache.customer.namespace=crm.customer.prod" `
+  "-Dsample.cache.customer.version-cache-ms=1000" `
+  "-Dreactor.cache.redis.port=16379" `
+  "-Dserver.port=18080" `
+  -cp "target\classes;$cp" `
+  com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
+```
+
+The reader derives `crm.customer.prod.detail`, `crm.customer.prod.segment`, `crm.customer.prod.status`, `crm.customer.prod.campaign`, and `crm.customer.prod.meta`. This is the simplest deployment shape when all projection names share one base.
+
+### Scenario: Explicit Production Namespaces
+
+Use this when teams own projections separately or when you want names that do not follow `<base>.<projection>`.
+
+```yaml
+env:
+  - name: SAMPLE_CACHE_CUSTOMER_DETAIL_NAMESPACE
+    value: "crm.customer.detail"
+  - name: SAMPLE_CACHE_CUSTOMER_SEGMENT_NAMESPACE
+    value: "crm.customer.segment"
+  - name: SAMPLE_CACHE_CUSTOMER_STATUS_NAMESPACE
+    value: "crm.customer.status"
+  - name: SAMPLE_CACHE_CUSTOMER_CAMPAIGN_NAMESPACE
+    value: "crm.customer.campaign"
+  - name: SAMPLE_CACHE_CUSTOMER_META_NAMESPACE
+    value: "crm.customer.meta"
+  - name: SAMPLE_CACHE_CUSTOMER_VERSION_CACHE_MS
+    value: "1000"
+```
+
+Operational effect: endpoint routing is explicit. The trade-off is more config surface. Use this for mature production deployments where cache ownership is clear.
+
+### Scenario: Campaign Must Show New Snapshot Quickly
+
+If the writer publishes campaign data every `30000 ms` with short campaign TTL, keep the reader version pointer cache low enough to observe the new `current` key quickly.
+
+```properties
+sample.cache.customer.version-cache-ms=250
+```
+
+Operational effect: fresh publishes become visible faster. The trade-off is more Redis `current` pointer reads. Use this only for endpoints where freshness matters more than a tiny Redis-read reduction.
+
+### Scenario: Very Hot Read Path
+
+If the endpoint receives high traffic and a few seconds of publish visibility delay is acceptable, raise the pointer cache.
+
+```properties
+sample.cache.customer.version-cache-ms=5000
+```
+
+Operational effect: fewer Redis `current` pointer reads on hot endpoints. The trade-off is that a newly published version can be observed up to about `5000 ms` later by that JVM.
+
+### Cache Miss Checklist
+
+If an endpoint returns `customer_cache_not_ready` or another cache miss code:
+
+```bash
+redis-cli keys 'crm.customer.detail:*'
+redis-cli get crm.customer.detail:current
+redis-cli pttl crm.customer.detail:current
+```
+
+Check these first: writer ran successfully, writer and reader namespace values match, TTL has not expired, and the reader points to the same Redis topology.
 
 ## Endpoints
 
@@ -178,7 +272,12 @@ For Cluster, keep `reactor.cache.redis.database=0`. If related keys must stay on
 | Property | Default | Use when |
 |---|---:|---|
 | `reactor.runtime.profile` | `micro-rest` | Low-RSS REST profile for cache-backed reads. |
-| `sample.cache.customer.namespace` | `crm.customer` | Must match writer namespace. |
+| `sample.cache.customer.namespace` | `crm.customer` | Base namespace. Runtime override creates `<base>.detail`, `<base>.segment`, `<base>.status`, `<base>.campaign`, and `<base>.meta` unless projection namespaces are set explicitly. |
+| `sample.cache.customer.detail.namespace` | `crm.customer.detail` | Must match `sample.writer.detail.namespace`. |
+| `sample.cache.customer.segment.namespace` | `crm.customer.segment` | Must match `sample.writer.segment.namespace`. |
+| `sample.cache.customer.status.namespace` | `crm.customer.status` | Must match `sample.writer.status.namespace`. |
+| `sample.cache.customer.campaign.namespace` | `crm.customer.campaign` | Must match `sample.writer.campaign.namespace`. |
+| `sample.cache.customer.meta.namespace` | `crm.customer.meta` | Must match `sample.writer.meta.namespace`. |
 | `sample.cache.customer.version-cache-ms` | `1000` | How long the reader keeps the current snapshot pointer in Java memory. Lower for faster publish visibility; raise for very hot read paths. |
 | `reactor.cache.redis.read-connections` | `2` | Increase only if Redis read latency is proven bottleneck. |
 | `reactor.cache.redis.max-read-inflight` | `128` | Bounds concurrent Redis reads. Lower for memory-first pods. |

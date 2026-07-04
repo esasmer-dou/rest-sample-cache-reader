@@ -35,10 +35,7 @@ public final class CacheReaderProperties {
     }
 
     public String get(String key) {
-        String value = System.getProperty(key);
-        if (value == null) {
-            value = System.getenv(toEnvKey(key));
-        }
+        String value = getRuntimeOverride(key);
         if (value == null) {
             value = properties.getProperty(key);
         }
@@ -46,6 +43,27 @@ public final class CacheReaderProperties {
             throw new IllegalStateException("Missing required property: " + key);
         }
         return value.trim();
+    }
+
+    public String getOptional(String key) {
+        String value = getRuntimeOverride(key);
+        if (value == null) {
+            value = properties.getProperty(key);
+        }
+        return value == null ? "" : value.trim();
+    }
+
+    public String getRuntimeOverride(String key) {
+        String value = System.getProperty(key);
+        if (value == null) {
+            value = System.getenv(toEnvKey(key));
+        }
+        return value == null ? null : value.trim();
+    }
+
+    public String getFileOptional(String key) {
+        String value = properties.getProperty(key);
+        return value == null ? "" : value.trim();
     }
 
     public int getInt(String key) {

@@ -98,8 +98,102 @@ Tipik akış:
 1. `rest-sample-cache-writer` yeni bir versioned snapshot yazar.
 2. Bu reader HTTP isteğini alır.
 3. Handler tek bir high-level metot çağırır: `customer(id)` veya `campaignCandidates("retention")`.
-4. Cache library current version, Redis key ve miss durumunu kendi çözer.
+4. Cache library ilgili projection namespace içindeki current version, Redis key ve miss durumunu kendi çözer.
 5. Handler `RawResponse.json(bytes)` döner; Java DTO graph tekrar kurulmaz.
+
+Reader, writer ile aynı projection ayrımını kullanır:
+
+| Endpoint grubu | Reader namespace | Eşleşmesi gereken writer property |
+|---|---|---|
+| Müşteri detayı ve müşteri numarası lookup | `sample.cache.customer.detail.namespace` | `sample.writer.detail.namespace` |
+| Segment listesi | `sample.cache.customer.segment.namespace` | `sample.writer.segment.namespace` |
+| Status listesi | `sample.cache.customer.status.namespace` | `sample.writer.status.namespace` |
+| Kampanya adayları | `sample.cache.customer.campaign.namespace` | `sample.writer.campaign.namespace` |
+| Metadata | `sample.cache.customer.meta.namespace` | `sample.writer.meta.namespace` |
+
+TTL değerleri farklıysa her veri tipini ayrı namespace’te tut. Writer ayrı projection snapshot publish ediyorsa reader endpoint’lerini tek namespace’e yönlendirme.
+
+## Reader TTL ve Namespace Reçeteleri
+
+Reader Redis data TTL değerini belirlemez. TTL kararı writer tarafındadır. Reader aynı namespace adlarını kullanmalı ve sadece current-version pointer değerini ne kadar cache’leyeceğini `sample.cache.customer.version-cache-ms` ile ayarlamalıdır.
+
+### Senaryo: Writer Base Namespace Override Kullanıyor
+
+Writer şu şekilde çalışıyorsa:
+
+```powershell
+java "-Dsample.writer.namespace=crm.customer.prod" `
+  "-Dsample.writer.cache-ttl-ms=900000" `
+  -cp "target\classes;$cp" `
+  com.reactor.sample.cache.writer.app.RestSampleCacheWriterApplication
+```
+
+Reader aynı base namespace ile başlatılmalıdır:
+
+```powershell
+java "-Dsample.cache.customer.namespace=crm.customer.prod" `
+  "-Dsample.cache.customer.version-cache-ms=1000" `
+  "-Dreactor.cache.redis.port=16379" `
+  "-Dserver.port=18080" `
+  -cp "target\classes;$cp" `
+  com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
+```
+
+Reader otomatik olarak `crm.customer.prod.detail`, `crm.customer.prod.segment`, `crm.customer.prod.status`, `crm.customer.prod.campaign` ve `crm.customer.prod.meta` namespace’lerini kullanır. Bütün projection adları aynı base altında duruyorsa en sade deployment şekli budur.
+
+### Senaryo: Production’da Namespace’ler Açık Verilecek
+
+Projection sahipliği ekipler arasında ayrıldıysa veya `<base>.<projection>` formatını kullanmak istemiyorsan namespace’leri açık ver.
+
+```yaml
+env:
+  - name: SAMPLE_CACHE_CUSTOMER_DETAIL_NAMESPACE
+    value: "crm.customer.detail"
+  - name: SAMPLE_CACHE_CUSTOMER_SEGMENT_NAMESPACE
+    value: "crm.customer.segment"
+  - name: SAMPLE_CACHE_CUSTOMER_STATUS_NAMESPACE
+    value: "crm.customer.status"
+  - name: SAMPLE_CACHE_CUSTOMER_CAMPAIGN_NAMESPACE
+    value: "crm.customer.campaign"
+  - name: SAMPLE_CACHE_CUSTOMER_META_NAMESPACE
+    value: "crm.customer.meta"
+  - name: SAMPLE_CACHE_CUSTOMER_VERSION_CACHE_MS
+    value: "1000"
+```
+
+Operasyonel etkisi: Endpointlerin hangi projection’dan okuduğu açıktır. Bedeli, config yüzeyinin artmasıdır. Cache sahipliği netleşmiş production ortamlarında bu model daha güvenlidir.
+
+### Senaryo: Kampanya Yeni Snapshot’ı Hızlı Görmeli
+
+Writer kampanya verisini `30000 ms` aralıkla publish ediyor ve campaign TTL kısa tutuluyorsa reader current pointer cache değeri düşük olmalıdır.
+
+```properties
+sample.cache.customer.version-cache-ms=250
+```
+
+Operasyonel etkisi: Yeni publish daha hızlı görünür. Bedeli, Redis `current` pointer okumasının artmasıdır. Bunu sadece tazeliğin küçük Redis-read azaltımından daha önemli olduğu endpointlerde kullan.
+
+### Senaryo: Çok Yoğun Okunan Endpoint
+
+Endpoint çok trafik alıyor ve yeni publish’in birkaç saniye geç görünmesi kabul edilebiliyorsa pointer cache artırılabilir.
+
+```properties
+sample.cache.customer.version-cache-ms=5000
+```
+
+Operasyonel etkisi: Hot endpointlerde Redis `current` pointer okuması azalır. Bedeli, yeni publish edilen version’ın bu JVM tarafından yaklaşık `5000 ms` daha geç görülebilmesidir.
+
+### Cache Miss Kontrol Listesi
+
+Endpoint `customer_cache_not_ready` veya benzer bir cache miss kodu dönerse önce şunları kontrol et:
+
+```bash
+redis-cli keys 'crm.customer.detail:*'
+redis-cli get crm.customer.detail:current
+redis-cli pttl crm.customer.detail:current
+```
+
+İlk bakılacak noktalar: writer başarılı çalıştı mı, writer ve reader namespace değerleri aynı mı, TTL dolmuş mu, reader aynı Redis topolojisine mi bağlanıyor?
 
 ## Endpoint’ler
 
@@ -182,7 +276,12 @@ Cluster’da `reactor.cache.redis.database=0` kalmalıdır. Birbiriyle ilişkili
 | Property | Default | Ne zaman değiştirirsin? |
 |---|---:|---|
 | `reactor.runtime.profile` | `micro-rest` | Cache-backed read endpointler için düşük RSS REST profili. |
-| `sample.cache.customer.namespace` | `crm.customer` | Writer namespace’i ile aynı olmalı. |
+| `sample.cache.customer.namespace` | `crm.customer` | Base namespace. Runtime override verirsen projection namespace açıkça verilmediği sürece `<base>.detail`, `<base>.segment`, `<base>.status`, `<base>.campaign` ve `<base>.meta` üretilir. |
+| `sample.cache.customer.detail.namespace` | `crm.customer.detail` | `sample.writer.detail.namespace` ile aynı olmalı. |
+| `sample.cache.customer.segment.namespace` | `crm.customer.segment` | `sample.writer.segment.namespace` ile aynı olmalı. |
+| `sample.cache.customer.status.namespace` | `crm.customer.status` | `sample.writer.status.namespace` ile aynı olmalı. |
+| `sample.cache.customer.campaign.namespace` | `crm.customer.campaign` | `sample.writer.campaign.namespace` ile aynı olmalı. |
+| `sample.cache.customer.meta.namespace` | `crm.customer.meta` | `sample.writer.meta.namespace` ile aynı olmalı. |
 | `sample.cache.customer.version-cache-ms` | `1000` | Reader’ın current snapshot pointer’ını Java memory’de ne kadar tutacağını belirler. Yeni publish daha hızlı görünsün istiyorsan düşür; çok hot read path’lerde Redis lookup azaltmak için artır. |
 | `reactor.cache.redis.read-connections` | `2` | Redis read latency gerçek darboğaz ise ölçerek artır. |
 | `reactor.cache.redis.max-read-inflight` | `128` | Eşzamanlı Redis read sayısını sınırlar. Memory-first pod’da düşür. |
