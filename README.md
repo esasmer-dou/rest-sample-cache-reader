@@ -8,7 +8,28 @@ This process reads Redis and returns HTTP JSON.
 
 It has no database. It has no scheduler. It has no Java Redis client. It has no Dubbo. Java owns the REST handler. Rust owns HTTP I/O and Redis I/O.
 
-This sample uses `com.reactor:java-rust-cache:0.2.3` and `com.reactor:rust-java-rest:3.2.6`.
+This sample uses `com.reactor:java-rust-cache:0.2.4` and `com.reactor:rust-java-rest:3.2.7`.
+
+## Property Layers
+
+The default `src/main/resources/rust-spring.properties` is the minimum local file. It keeps only the
+server port, runtime profile, cache namespace and local Redis address.
+
+Use production settings as an overlay:
+
+```powershell
+java "-Dreactor.config.file=src/main/resources/config/production.properties" ...
+```
+
+Use advanced tuning only after measuring p99, 503 ratio and RSS:
+
+```powershell
+java "-Dreactor.config.file=src/main/resources/config/production.properties;src/main/resources/config/advanced-tuning.properties" ...
+```
+
+- `config/production.properties`: required indexes, low-RSS gate, conservative Redis timeouts.
+- `config/advanced-tuning.properties`: per-route admission, native trim and projection namespace overrides.
+- Environment alternative: `REACTOR_CONFIG_FILE=/app/config/production.properties`.
 
 ## Contents
 
@@ -356,4 +377,4 @@ For Cluster, keep `reactor.cache.redis.database=0`. If related keys must stay on
 
 ## Production Config Copy
 
-The default `src/main/resources/rust-spring.properties` stays easy to run on a developer machine. For Kubernetes or container production, start from `src/main/resources/rust-spring.production.properties` instead. That file requires generated component/route indexes, disables runtime classpath scan fallback, enables the footprint gate in `enforce` mode and keeps native pools small by default.
+The default `src/main/resources/rust-spring.properties` stays easy to run on a developer machine. For Kubernetes or container production, use `src/main/resources/config/production.properties` as an overlay with `-Dreactor.config.file=...`. That file requires generated component/route indexes, disables runtime classpath scan fallback, enables the footprint gate in `enforce` mode and keeps native pools small by default.

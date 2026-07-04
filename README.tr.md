@@ -8,7 +8,28 @@ Bu uygulama Redis'ten okur ve HTTP JSON döner.
 
 DB bağlantısı yoktur. Scheduler yoktur. Java Redis client yoktur. Dubbo yoktur. Java REST handler'ı yönetir. HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.2.3` ve `com.reactor:rust-java-rest:3.2.6` ile çalışır.
+Bu örnek `com.reactor:java-rust-cache:0.2.4` ve `com.reactor:rust-java-rest:3.2.7` ile çalışır.
+
+## Property Katmanları
+
+Varsayılan `src/main/resources/rust-spring.properties` minimum local dosyadır. Sadece server port,
+runtime profile, cache namespace ve local Redis adresini içerir.
+
+Production ayarlarını overlay olarak kullanın:
+
+```powershell
+java "-Dreactor.config.file=src/main/resources/config/production.properties" ...
+```
+
+Advanced tuning dosyasını p99, 503 oranı ve RSS ölçmeden kullanmayın:
+
+```powershell
+java "-Dreactor.config.file=src/main/resources/config/production.properties;src/main/resources/config/advanced-tuning.properties" ...
+```
+
+- `config/production.properties`: index zorunluluğu, low-RSS gate ve konservatif Redis timeout değerlerini içerir.
+- `config/advanced-tuning.properties`: route admission, native trim ve projection namespace override içindir.
+- Environment alternatifi: `REACTOR_CONFIG_FILE=/app/config/production.properties`.
 
 ## İçindekiler
 
@@ -357,4 +378,4 @@ Cluster’da `reactor.cache.redis.database=0` kalmalıdır. Birbiriyle ilişkili
 
 ## Production Config Kopyası
 
-Default `src/main/resources/rust-spring.properties` dosyası localde kolay çalışmak için sade tutuldu. Kubernetes veya container production için başlangıç dosyası olarak `src/main/resources/rust-spring.production.properties` kullan. Bu dosya component/route index üretimini zorunlu tutar, runtime classpath scan fallback’i kapatır, footprint gate’i `enforce` moduna alır ve native pool değerlerini düşük memory hedefiyle küçük başlatır.
+Default `src/main/resources/rust-spring.properties` dosyası localde kolay çalışmak için sade tutuldu. Kubernetes veya container production için `src/main/resources/config/production.properties` dosyasını `-Dreactor.config.file=...` ile overlay olarak kullanın. Bu dosya component/route index üretimini zorunlu tutar, runtime classpath scan fallback'i kapatır, footprint gate'i `enforce` moduna alır ve native pool değerlerini düşük memory hedefiyle küçük başlatır.
