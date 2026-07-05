@@ -1,6 +1,6 @@
 # rest-sample-cache-reader
 
-[English](README.md) | [Turkish](README.tr.md)
+[English](https://github.com/esasmer-dou/rest-sample-cache-reader/blob/master/README.md) | [Turkish](https://github.com/esasmer-dou/rest-sample-cache-reader/blob/master/README.tr.md)
 
 Minimal Rust-Java REST sample that serves precomputed Redis JSON through `java-rust-cache`.
 

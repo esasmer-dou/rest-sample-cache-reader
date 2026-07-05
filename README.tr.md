@@ -1,6 +1,6 @@
 # rest-sample-cache-reader
 
-[English](README.md) | [Turkish](README.tr.md)
+[English](https://github.com/esasmer-dou/rest-sample-cache-reader/blob/master/README.md) | [Turkish](https://github.com/esasmer-dou/rest-sample-cache-reader/blob/master/README.tr.md)
 
 `java-rust-cache` ile Redis'te hazır duran JSON'u servis eden minimum Rust-Java REST örneği.
 
