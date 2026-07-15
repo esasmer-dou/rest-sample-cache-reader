@@ -10,7 +10,7 @@ Bu uygulama Redis'ten okur ve HTTP JSON döner.
 
 DB bağlantısı yoktur. Scheduler yoktur. Java Redis client yoktur. Dubbo yoktur. Java REST handler'ı yönetir. HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.2.4` ve `com.reactor:rust-java-rest:3.2.7` ile çalışır.
+Bu örnek `com.reactor:java-rust-cache:0.3.1` ve `com.reactor:rust-java-rest:3.3.1` ile çalışır.
 
 ## Property Katmanları
 
@@ -189,18 +189,14 @@ public CacheReadResult campaignCandidates(String campaign) {
 Process başlangıcı da açık ve kısadır:
 
 ```java
-RestApplication.builder()
-    .module(context -> {
-        CacheProperties properties = CacheProperties.from(context.properties());
-        RustCache cache = context.manage(RustCaches.create(properties.asProperties()));
-        CustomerCacheService service = new CustomerCacheService(cache, properties);
-        context.handlers(new HealthHandler(), new CustomerCacheHandler(service));
-    })
-    .start();
+public static void main(String[] args) {
+    RestApplication.run(CacheReaderModule.INSTANCE);
+}
 ```
 
-`context.manage(...)`, Redis client yaşam döngüsünü REST uygulamasına bağlar. Uygulama normal
-kapanırken veya client açıldıktan sonra startup hatası oluştuğunda kaynak güvenli biçimde kapatılır.
+`CacheReaderModule`, Redis client, service ve handler bağlantılarını tek ve açık bir composition
+sınıfında gösterir. Bu sınıftaki `context.manage(...)`, Redis client yaşam döngüsünü REST uygulamasına
+bağlar. Normal kapanışta ve başlangıç hatasında kaynak güvenli biçimde kapatılır.
 
 BEST: writer ile aynı config çözümünü kullanmak için library'yi kullanın. Endpoint davranışını ve
 cache miss kararını REST servisinde explicit bırakın.

@@ -8,7 +8,7 @@ This process reads Redis and returns HTTP JSON.
 
 It has no database. It has no scheduler. It has no Java Redis client. It has no Dubbo. Java owns the REST handler. Rust owns HTTP I/O and Redis I/O.
 
-This sample uses `com.reactor:java-rust-cache:0.2.4` and `com.reactor:rust-java-rest:3.2.7`.
+This sample uses `com.reactor:java-rust-cache:0.3.1` and `com.reactor:rust-java-rest:3.3.1`.
 
 ## Property Layers
 
@@ -186,18 +186,14 @@ public CacheReadResult campaignCandidates(String campaign) {
 The process bootstrap is also explicit but short:
 
 ```java
-RestApplication.builder()
-    .module(context -> {
-        CacheProperties properties = CacheProperties.from(context.properties());
-        RustCache cache = context.manage(RustCaches.create(properties.asProperties()));
-        CustomerCacheService service = new CustomerCacheService(cache, properties);
-        context.handlers(new HealthHandler(), new CustomerCacheHandler(service));
-    })
-    .start();
+public static void main(String[] args) {
+    RestApplication.run(CacheReaderModule.INSTANCE);
+}
 ```
 
-`context.manage(...)` makes the REST lifecycle own the Redis client. It closes the client during
-normal shutdown and if startup fails after the client has been created.
+`CacheReaderModule` shows the Redis client, service, and handlers in one explicit composition class.
+Its `context.manage(...)` call makes the REST lifecycle own the Redis client. The client is closed on
+normal shutdown and when startup fails after it has been created.
 
 BEST: use the library to keep config parsing identical to the writer. Keep endpoint behavior and
 miss handling explicit in the REST service.
