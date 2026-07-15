@@ -6,14 +6,14 @@ import com.reactor.rust.annotations.RequestMapping;
 import com.reactor.rust.annotations.RequestParam;
 import com.reactor.rust.annotations.RouteAdmission;
 import com.reactor.rust.cache.api.CacheReadResult;
+import com.reactor.rust.http.JsonResponses;
+import com.reactor.rust.http.MediaType;
 import com.reactor.rust.http.RawResponse;
 import com.reactor.rust.http.ResponseEntity;
 import com.reactor.sample.cache.reader.service.CustomerCacheService;
 
 @RequestMapping("/api/v1/cache/customers")
 public final class CustomerCacheHandler {
-
-    private static final String JSON = "application/json; charset=utf-8";
 
     private final CustomerCacheService customerCache;
 
@@ -58,7 +58,7 @@ public final class CustomerCacheHandler {
 
     @GetMapping(value = "/cache-metrics", responseType = RawResponse.class)
     public ResponseEntity<RawResponse> cacheMetrics() {
-        return ResponseEntity.ok(RawResponse.text(customerCache.metricsJson(), JSON));
+        return ResponseEntity.ok(RawResponse.text(customerCache.metricsJson(), MediaType.APPLICATION_JSON_UTF8));
     }
 
     private static ResponseEntity<RawResponse> toResponse(CacheReadResult result, String missCode) {
@@ -66,8 +66,6 @@ public final class CustomerCacheHandler {
             return ResponseEntity.ok(RawResponse.json(result.bytes()));
         }
         String code = result.isCacheNotReady() ? "customer_cache_not_ready" : missCode;
-        return ResponseEntity.notFound(RawResponse.text(
-                "{\"code\":\"" + code + "\",\"message\":\"Redis snapshot is not available yet\"}",
-                JSON));
+        return ResponseEntity.notFound(JsonResponses.error(code, "Redis snapshot is not available yet"));
     }
 }

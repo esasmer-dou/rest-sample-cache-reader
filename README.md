@@ -161,6 +161,12 @@ Projection reader config is resolved by `java-rust-cache`:
 ```java
 List<CacheReaderProjectionSettings> projections =
         CacheReaderProjectionSettings.resolveAll(properties, "sample.cache.customer");
+
+VersionedJsonProjectionReaders readers =
+        VersionedJsonProjectionReaders.create(
+                cache,
+                projections,
+                properties.getLong("sample.cache.customer.version-cache-ms"));
 ```
 
 The library resolves:
@@ -172,10 +178,26 @@ The library resolves:
 Your service still decides which endpoint reads which projection:
 
 ```java
-public RawResponse campaignCandidates(String campaign) {
-    return RawResponse.json(cacheService.campaignCandidates(campaign));
+public CacheReadResult campaignCandidates(String campaign) {
+    return readers.getIndex("campaign", "campaign", campaign);
 }
 ```
+
+The process bootstrap is also explicit but short:
+
+```java
+RestApplication.builder()
+    .module(context -> {
+        CacheProperties properties = CacheProperties.from(context.properties());
+        RustCache cache = context.manage(RustCaches.create(properties.asProperties()));
+        CustomerCacheService service = new CustomerCacheService(cache, properties);
+        context.handlers(new HealthHandler(), new CustomerCacheHandler(service));
+    })
+    .start();
+```
+
+`context.manage(...)` makes the REST lifecycle own the Redis client. It closes the client during
+normal shutdown and if startup fails after the client has been created.
 
 BEST: use the library to keep config parsing identical to the writer. Keep endpoint behavior and
 miss handling explicit in the REST service.

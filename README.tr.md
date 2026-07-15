@@ -164,6 +164,12 @@ Projection reader config artık `java-rust-cache` tarafından çözülür:
 ```java
 List<CacheReaderProjectionSettings> projections =
         CacheReaderProjectionSettings.resolveAll(properties, "sample.cache.customer");
+
+VersionedJsonProjectionReaders readers =
+        VersionedJsonProjectionReaders.create(
+                cache,
+                projections,
+                properties.getLong("sample.cache.customer.version-cache-ms"));
 ```
 
 Library şunları çözer:
@@ -175,10 +181,26 @@ Library şunları çözer:
 Hangi endpoint'in hangi projection'ı okuyacağı yine servis kodunda açık kalır:
 
 ```java
-public RawResponse campaignCandidates(String campaign) {
-    return RawResponse.json(cacheService.campaignCandidates(campaign));
+public CacheReadResult campaignCandidates(String campaign) {
+    return readers.getIndex("campaign", "campaign", campaign);
 }
 ```
+
+Process başlangıcı da açık ve kısadır:
+
+```java
+RestApplication.builder()
+    .module(context -> {
+        CacheProperties properties = CacheProperties.from(context.properties());
+        RustCache cache = context.manage(RustCaches.create(properties.asProperties()));
+        CustomerCacheService service = new CustomerCacheService(cache, properties);
+        context.handlers(new HealthHandler(), new CustomerCacheHandler(service));
+    })
+    .start();
+```
+
+`context.manage(...)`, Redis client yaşam döngüsünü REST uygulamasına bağlar. Uygulama normal
+kapanırken veya client açıldıktan sonra startup hatası oluştuğunda kaynak güvenli biçimde kapatılır.
 
 BEST: writer ile aynı config çözümünü kullanmak için library'yi kullanın. Endpoint davranışını ve
 cache miss kararını REST servisinde explicit bırakın.
