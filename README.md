@@ -8,10 +8,10 @@ This process reads Redis and returns HTTP JSON.
 
 It has no database. It has no scheduler. It has no Java Redis client. It has no Dubbo. Java owns the REST handler. Rust owns HTTP I/O and Redis I/O.
 
-This sample uses `com.reactor:java-rust-cache:0.4.0` and `com.reactor:rust-java-rest:3.4.0`.
+This sample uses `com.reactor:java-rust-cache:0.4.1` and `com.reactor:rust-java-rest:3.4.1`.
 Its Redis client is explicitly `read-only`, so write pools and write permits are not allocated.
 
-[Release notes for v0.3.0](docs/RELEASE_NOTES_v0.3.0.md)
+[Release notes for v0.3.1](docs/RELEASE_NOTES_v0.3.1.md)
 
 ## Property Layers
 

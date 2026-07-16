@@ -10,10 +10,10 @@ Bu uygulama Redis'ten okur ve HTTP JSON döner.
 
 DB bağlantısı yoktur. Scheduler yoktur. Java Redis client yoktur. Dubbo yoktur. Java REST handler'ı yönetir. HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.4.0` ve `com.reactor:rust-java-rest:3.4.0` ile çalışır.
+Bu örnek `com.reactor:java-rust-cache:0.4.1` ve `com.reactor:rust-java-rest:3.4.1` ile çalışır.
 Redis client açıkça `read-only` çalışır. Bu nedenle write pool ve write permit kaynakları açılmaz.
 
-[v0.3.0 sürüm notları](docs/RELEASE_NOTES_v0.3.0.md)
+[v0.3.1 sürüm notları](docs/RELEASE_NOTES_v0.3.1.md)
 
 ## Property Katmanları
 
