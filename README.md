@@ -8,7 +8,10 @@ This process reads Redis and returns HTTP JSON.
 
 It has no database. It has no scheduler. It has no Java Redis client. It has no Dubbo. Java owns the REST handler. Rust owns HTTP I/O and Redis I/O.
 
-This sample uses `com.reactor:java-rust-cache:0.3.1` and `com.reactor:rust-java-rest:3.3.1`.
+This sample uses `com.reactor:java-rust-cache:0.4.0` and `com.reactor:rust-java-rest:3.4.0`.
+Its Redis client is explicitly `read-only`, so write pools and write permits are not allocated.
+
+[Release notes for v0.3.0](docs/RELEASE_NOTES_v0.3.0.md)
 
 ## Property Layers
 
@@ -319,6 +322,8 @@ Use Sentinel when Redis has one writable primary and failover is handled by Sent
 
 ```yaml
 env:
+  - name: REACTOR_CACHE_REDIS_ACCESS_MODE
+    value: "read-only"
   - name: REACTOR_CACHE_REDIS_TOPOLOGY
     value: "sentinel"
   - name: REACTOR_CACHE_REDIS_NODES
@@ -370,6 +375,7 @@ For Cluster, keep `reactor.cache.redis.database=0`. If related keys must stay on
 | `sample.cache.customer.meta.namespace` | `crm.customer.meta` | Reads snapshot metadata. | Must match `sample.writer.meta.namespace`. |
 | `sample.cache.customer.version-cache-ms` | `1000` | Caches the Redis current-version pointer in Java memory. | Lower for faster publish visibility. Raise for very hot reads. |
 | `reactor.cache.redis.read-connections` | `2` | Opens native Redis read connections. | Increase only if Redis read latency is proven. |
+| `reactor.cache.redis.access-mode` | `read-only` | Creates only the native read plane and rejects writes before JNI. | Keep it `read-only` in this reader sample. Use `read-write` only if this process truly writes Redis. |
 | `reactor.cache.redis.max-read-inflight` | `128` | Bounds concurrent Redis reads. | Lower for memory-first pods. |
 | `reactor.cache.redis.topology` | `standalone` | Selects Redis mode. | Use `sentinel` or `cluster` in production. |
 | `reactor.cache.redis.nodes` | empty | Lists Sentinel or Cluster nodes. | Set when topology is `sentinel` or `cluster`. |
