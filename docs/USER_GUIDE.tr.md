@@ -78,7 +78,7 @@ Uygulamayı Maven ile çalıştırın:
 
 ```powershell
 mvn -q package
-java -jar target/rest-sample-cache-reader-0.2.0.jar
+java -jar target/rest-sample-cache-reader-0.4.0.jar
 ```
 
 Health kontrolü:

@@ -8,10 +8,10 @@ This process reads Redis and returns HTTP JSON.
 
 It has no database. It has no scheduler. It has no Java Redis client. It has no Dubbo. Java owns the REST handler. Rust owns HTTP I/O and Redis I/O.
 
-This sample uses `com.reactor:java-rust-cache:0.4.1` and `com.reactor:rust-java-rest:3.4.1`.
+This sample uses `com.reactor:java-rust-cache:0.5.0` and `com.reactor:rust-java-rest:4.0.0`.
 Its Redis client is explicitly `read-only`, so write pools and write permits are not allocated.
 
-[Release notes for v0.3.1](docs/RELEASE_NOTES_v0.3.1.md)
+[Release notes for v0.4.0](docs/RELEASE_NOTES_v0.4.0.md)
 
 ## Property Layers
 
@@ -73,6 +73,7 @@ Open another terminal and call the endpoints:
 
 ```powershell
 curl.exe http://127.0.0.1:18080/app/health
+curl.exe http://127.0.0.1:18080/app/readiness
 curl.exe http://127.0.0.1:18080/api/v1/cache/customers/1
 curl.exe "http://127.0.0.1:18080/api/v1/cache/customers/by-customer-no?customerNo=CUST-1002"
 curl.exe http://127.0.0.1:18080/api/v1/cache/customers/segments/pilot
@@ -84,6 +85,10 @@ curl.exe http://127.0.0.1:18080/api/v1/cache/customers/cache-metrics
 
 The handler does not call the database. It calls the cache abstraction. Redis I/O runs in Rust
 native code. The HTTP response is returned with `RawResponse.json(bytes)`.
+
+`/app/health` is liveness and does not call Redis. `/app/readiness` checks whether the required
+snapshot is published. The reusable `HealthStarter` runs this check only when readiness is called,
+uses a bounded timeout, exposes metrics, and keeps dependency exception details out of the response.
 
 ## Maven Package Access
 
@@ -170,6 +175,12 @@ VersionedJsonProjectionReaders readers =
                 cache,
                 projections,
                 properties.getLong("sample.cache.customer.version-cache-ms"));
+
+VersionedJsonProjectionReaders.BoundProjection details =
+        readers.bind(CustomerProjection.DETAIL);
+VersionedJsonProjectionReaders.BoundIndex campaigns =
+        readers.bind(CustomerProjection.CAMPAIGN)
+                .bind(CustomerProjectionIndex.CAMPAIGN);
 ```
 
 The library resolves:
@@ -182,9 +193,15 @@ Your service still decides which endpoint reads which projection:
 
 ```java
 public CacheReadResult campaignCandidates(String campaign) {
-    return readers.getIndex("campaign", "campaign", campaign);
+    return campaigns.get(campaign);
 }
 ```
+
+`CustomerProjection` and `CustomerProjectionIndex` come from the shared `rust-sample-model`
+artifact. Writer and reader therefore use one compile-time vocabulary instead of repeating string
+literals. The binding is performed once in the service constructor. Requests do not repeat projection map
+lookups or parse projection names. Missing optional projections still return the controlled
+cache-not-ready result.
 
 The process bootstrap is also explicit but short:
 
@@ -197,6 +214,9 @@ public static void main(String[] args) {
 `CacheReaderModule` shows the Redis client, service, and handlers in one explicit composition class.
 Its `context.manage(...)` call makes the REST lifecycle own the Redis client. The client is closed on
 normal shutdown and when startup fails after it has been created.
+
+The Maven build generates `META-INF/reactor/components.idx` and `META-INF/reactor/routes.idx` from
+compiled handlers. Do not maintain these files by hand. Runtime classpath scan remains disabled.
 
 BEST: use the library to keep config parsing identical to the writer. Keep endpoint behavior and
 miss handling explicit in the REST service.

@@ -10,10 +10,10 @@ Bu uygulama Redis'ten okur ve HTTP JSON döner.
 
 DB bağlantısı yoktur. Scheduler yoktur. Java Redis client yoktur. Dubbo yoktur. Java REST handler'ı yönetir. HTTP I/O ve Redis I/O Rust tarafındadır.
 
-Bu örnek `com.reactor:java-rust-cache:0.4.1` ve `com.reactor:rust-java-rest:3.4.1` ile çalışır.
+Bu örnek `com.reactor:java-rust-cache:0.5.0` ve `com.reactor:rust-java-rest:4.0.0` ile çalışır.
 Redis client açıkça `read-only` çalışır. Bu nedenle write pool ve write permit kaynakları açılmaz.
 
-[v0.3.1 sürüm notları](docs/RELEASE_NOTES_v0.3.1.md)
+[v0.4.0 sürüm notları](docs/RELEASE_NOTES_v0.4.0.md)
 
 ## Property Katmanları
 
@@ -76,6 +76,7 @@ Ayrı bir terminal açın ve endpoint'leri deneyin:
 
 ```powershell
 curl.exe http://127.0.0.1:18080/app/health
+curl.exe http://127.0.0.1:18080/app/readiness
 curl.exe http://127.0.0.1:18080/api/v1/cache/customers/1
 curl.exe "http://127.0.0.1:18080/api/v1/cache/customers/by-customer-no?customerNo=CUST-1002"
 curl.exe http://127.0.0.1:18080/api/v1/cache/customers/segments/pilot
@@ -87,6 +88,10 @@ curl.exe http://127.0.0.1:18080/api/v1/cache/customers/cache-metrics
 
 Bu örnekte handler DB'ye gitmez. Handler sadece cache abstraction çağırır. Redis I/O Rust native
 tarafta çalışır. HTTP response `RawResponse.json(bytes)` ile döner.
+
+`/app/health` liveness endpoint'idir ve Redis çağırmaz. `/app/readiness`, gerekli snapshot'ın publish
+edilip edilmediğini kontrol eder. Ortak `HealthStarter` bu kontrolü yalnız readiness çağrısında yapar.
+Timeout sınırı uygular, metric üretir ve dependency exception detayını yanıta yazmaz.
 
 ## Maven Package Erişimi
 
@@ -173,6 +178,12 @@ VersionedJsonProjectionReaders readers =
                 cache,
                 projections,
                 properties.getLong("sample.cache.customer.version-cache-ms"));
+
+VersionedJsonProjectionReaders.BoundProjection details =
+        readers.bind(CustomerProjection.DETAIL);
+VersionedJsonProjectionReaders.BoundIndex campaigns =
+        readers.bind(CustomerProjection.CAMPAIGN)
+                .bind(CustomerProjectionIndex.CAMPAIGN);
 ```
 
 Library şunları çözer:
@@ -185,9 +196,15 @@ Hangi endpoint'in hangi projection'ı okuyacağı yine servis kodunda açık kal
 
 ```java
 public CacheReadResult campaignCandidates(String campaign) {
-    return readers.getIndex("campaign", "campaign", campaign);
+    return campaigns.get(campaign);
 }
 ```
+
+`CustomerProjection` ve `CustomerProjectionIndex`, ortak `rust-sample-model` artifact'inden gelir.
+Reader ve writer aynı derleme zamanı sözlüğünü kullanır. String değerleri farklı sınıflarda tekrar
+yazılmaz. Bu bağlantılar servis constructor'ında bir kez kurulur. Request sırasında projection map araması
+tekrarlanmaz ve projection adı yeniden çözülmez. Opsiyonel projection yoksa kontrollü
+cache-not-ready sonucu dönmeye devam eder.
 
 Process başlangıcı da açık ve kısadır:
 
@@ -200,6 +217,10 @@ public static void main(String[] args) {
 `CacheReaderModule`, Redis client, service ve handler bağlantılarını tek ve açık bir composition
 sınıfında gösterir. Bu sınıftaki `context.manage(...)`, Redis client yaşam döngüsünü REST uygulamasına
 bağlar. Normal kapanışta ve başlangıç hatasında kaynak güvenli biçimde kapatılır.
+
+Maven build, derlenmiş handler sınıflarından `META-INF/reactor/components.idx` ve
+`META-INF/reactor/routes.idx` dosyalarını üretir. Bu dosyaları elle güncellemeyin. Runtime classpath
+taraması kapalı kalır.
 
 BEST: writer ile aynı config çözümünü kullanmak için library'yi kullanın. Endpoint davranışını ve
 cache miss kararını REST servisinde explicit bırakın.
