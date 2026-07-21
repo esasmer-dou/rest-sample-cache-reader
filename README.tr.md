@@ -1,78 +1,53 @@
 # rest-sample-cache-reader
 
-[English](https://github.com/esasmer-dou/rest-sample-cache-reader/blob/master/README.md) | [Turkish](https://github.com/esasmer-dou/rest-sample-cache-reader/blob/master/README.tr.md)
+[English](README.md) | [Türkçe](README.tr.md)
 
-[Kısa Kullanıcı Rehberi](docs/USER_GUIDE.tr.md) | [PDF](docs/rest-sample-cache-reader-user-guide.tr.pdf)
+Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uygulamadır.
 
-`java-rust-cache` ile Redis'te hazır duran JSON'u servis eden minimum Rust-Java REST örneği.
+- HTTP trafiğini `rust-java-rest` karşılar.
+- Redis I/O işlemlerini `java-rust-cache` üzerinden Rust yapar.
+- Handler ve iş akışı Java'da kalır.
+- Bu uygulama PostgreSQL'e bağlanmaz.
+- Bu uygulama Redis'e veri yazmaz.
 
-Bu uygulama Redis'ten okur ve HTTP JSON döner.
+Kullanılan sürümler: `rust-java-rest:4.0.0`, `java-rust-cache:0.5.0`, `rust-sample-model:0.3.0`.
 
-DB bağlantısı yoktur. Scheduler yoktur. Java Redis client yoktur. Dubbo yoktur. Java REST handler'ı yönetir. HTTP I/O ve Redis I/O Rust tarafındadır.
+## Buradan Başlayın
 
-Bu örnek `com.reactor:java-rust-cache:0.5.0` ve `com.reactor:rust-java-rest:4.0.0` ile çalışır.
-Redis client açıkça `read-only` çalışır. Bu nedenle write pool ve write permit kaynakları açılmaz.
+Başka bir uygulama Redis read modelini hazırlıyorsa bu sample'ı kullanın.
 
-[v0.4.0 sürüm notları](docs/RELEASE_NOTES_v0.4.0.md)
+Snapshot, Redis'e belirli bir sürümle yazılmış hazır veri setidir.
 
-## Property Katmanları
-
-Varsayılan `src/main/resources/rust-spring.properties` minimum local dosyadır. Sadece server port,
-runtime profile, cache namespace ve local Redis adresini içerir.
-
-Production ayarlarını overlay olarak kullanın:
-
-```powershell
-java "-Dreactor.config.file=src/main/resources/config/production.properties" ...
+```text
+PostgreSQL -> cache writer -> Redis -> bu reader -> HTTP istemcisi
 ```
 
-Advanced tuning dosyasını p99, 503 oranı ve RSS ölçmeden kullanmayın:
+Snapshot üretmeniz gerekiyorsa önce
+[`rest-sample-cache-writer`](https://github.com/esasmer-dou/rest-sample-cache-writer) projesini çalıştırın.
+
+## Hızlı Başlangıç
+
+### 1. Örnek veriyi yayınlayın
+
+Writer sample'ı bir kez çalıştırın. Writer, PostgreSQL verisini okuyup Redis snapshot'larını oluşturur.
+
+### 2. Reader'ı başlatın
+
+Bu repo dizininde çalıştırın:
 
 ```powershell
-java "-Dreactor.config.file=src/main/resources/config/production.properties;src/main/resources/config/advanced-tuning.properties" ...
-```
-
-- `config/production.properties`: index zorunluluğu, low-RSS gate ve konservatif Redis timeout değerlerini içerir.
-- `config/advanced-tuning.properties`: route admission, native trim ve projection namespace override içindir.
-- Environment alternatifi: `REACTOR_CONFIG_FILE=/app/config/production.properties`.
-
-## İçindekiler
-
-1. [Kopyala-Yapıştır: Redis Snapshot'ını REST API ile Oku](#kopyala-yapıştır-redis-snapshotını-rest-api-ile-oku)
-2. [Maven Package Erişimi](#maven-package-erişimi)
-3. [Gerçek Senaryo](#gerçek-senaryo)
-4. [Deklaratif Projection Config](#deklaratif-projection-config)
-5. [Reader TTL ve Namespace Reçeteleri](#reader-ttl-ve-namespace-reçeteleri)
-6. [Endpoint'ler](#endpointler)
-7. [Production Redis Topolojisi](#production-redis-topolojisi)
-8. [Bu Akış Neden Doğru?](#bu-akış-neden-doğru)
-9. [Ana Property'ler](#ana-propertyler)
-10. [Sözlük](#sözlük)
-11. [Production Config Kopyası](#production-config-kopyası)
-
-## Kopyala-Yapıştır: Redis Snapshot'ını REST API ile Oku
-
-Bu senaryoda Redis içinde müşteri snapshot'ı hazırdır. Snapshot'ı hazırlamak için önce
-`rest-sample-cache-writer` README dosyasındaki yazma örneğini bir kez çalıştırın.
-
-Sonra bu komutları `rest-sample-cache-reader` dizininde çalıştırın:
-
-```powershell
-docker start rs-cache-redis-test
-
 $env:GITHUB_PACKAGES_TOKEN="READ_PACKAGES_YETKILI_TOKEN"
-mvn -q clean package
-mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
 
-$cp = Get-Content target\cp.txt
-java "-Dserver.port=18080" `
+mvn -q `
+  "-Dserver.port=18080" `
   "-Dreactor.cache.redis.host=127.0.0.1" `
   "-Dreactor.cache.redis.port=16379" `
-  -cp "target\classes;$cp" `
-  com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
+  clean compile exec:java
 ```
 
-Ayrı bir terminal açın ve endpoint'leri deneyin:
+Başlangıç sınıfı `pom.xml` içinde hazırdır.
+
+### 3. API'yi çağırın
 
 ```powershell
 curl.exe http://127.0.0.1:18080/app/health
@@ -83,346 +58,130 @@ curl.exe http://127.0.0.1:18080/api/v1/cache/customers/segments/pilot
 curl.exe http://127.0.0.1:18080/api/v1/cache/customers/statuses/active
 curl.exe http://127.0.0.1:18080/api/v1/cache/customers/campaigns/retention/candidates
 curl.exe http://127.0.0.1:18080/api/v1/cache/customers/meta
-curl.exe http://127.0.0.1:18080/api/v1/cache/customers/cache-metrics
 ```
 
-Bu örnekte handler DB'ye gitmez. Handler sadece cache abstraction çağırır. Redis I/O Rust native
-tarafta çalışır. HTTP response `RawResponse.json(bytes)` ile döner.
+`/app/health` yalnızca uygulamayı kontrol eder. `/app/readiness`, Redis snapshot'ının hazır olup olmadığını da kontrol eder.
 
-`/app/health` liveness endpoint'idir ve Redis çağırmaz. `/app/readiness`, gerekli snapshot'ın publish
-edilip edilmediğini kontrol eder. Ortak `HealthStarter` bu kontrolü yalnız readiness çağrısında yapar.
-Timeout sınırı uygular, metric üretir ve dependency exception detayını yanıta yazmaz.
+## Temel Endpoint'ler
+
+| Endpoint | Dönen veri |
+|---|---|
+| `GET /api/v1/cache/customers/{id}` | Tek müşteri snapshot'ı |
+| `GET /api/v1/cache/customers/by-customer-no?customerNo=...` | Müşteri numarasına göre tek müşteri |
+| `GET /api/v1/cache/customers/segments/{segment}` | Bir segmentteki müşteriler |
+| `GET /api/v1/cache/customers/statuses/{status}` | Bir durumdaki müşteriler |
+| `GET /api/v1/cache/customers/campaigns/{campaign}/candidates` | Kampanya adayları |
+| `GET /api/v1/cache/customers/meta` | Snapshot bilgisi |
+| `GET /api/v1/cache/customers/cache-metrics` | JSON cache metrikleri |
+
+## Redis Modunu Seçin
+
+| Ortam | Ayar |
+|---|---|
+| Lokal Redis | `reactor.cache.redis.topology=standalone` |
+| Redis Sentinel | `reactor.cache.redis.topology=sentinel`, Sentinel node'ları ve master adı |
+| Redis Cluster | `reactor.cache.redis.topology=cluster` ve cluster node'ları |
+
+Reader bilinçli olarak yalnızca okuma yapar:
+
+```properties
+reactor.cache.redis.access-mode=read-only
+```
+
+Bu uygulama Redis'e veri yazmayacaksa write kapasitesini açmayın.
+
+## Konfigürasyon
+
+Uygulama ayarları şu sırayla okur:
+
+1. `src/main/resources/rust-spring.properties`
+2. `reactor.config.file` veya `REACTOR_CONFIG_FILE` ile verilen dosyalar
+3. JVM `-D...` değerleri ve desteklenen environment variable'lar
+
+Önce lokal varsayılanlarla başlayın:
+
+```properties
+server.port=8080
+reactor.runtime.profile=micro-rest
+sample.cache.customer.namespace=crm.customer
+reactor.cache.redis.host=127.0.0.1
+reactor.cache.redis.port=6379
+```
+
+Deployment sırasında production ayarlarını ekleyin:
+
+```powershell
+java "-Dreactor.config.file=src/main/resources/config/production.properties" ...
+```
+
+İleri seviye ayarları yalnızca gecikme, reddedilen istek ve process memory (RSS) ölçümü yaptıktan sonra kullanın:
+
+```powershell
+java "-Dreactor.config.file=src/main/resources/config/production.properties;src/main/resources/config/advanced-tuning.properties" ...
+```
+
+| Dosya | Amacı |
+|---|---|
+| `rust-spring.properties` | Küçük lokal varsayılanlar |
+| `config/production.properties` | Güvenli production limitleri ve timeout'lar |
+| `config/advanced-tuning.properties` | Route limitleri, native trim ve namespace override'ları |
+
+Reader ve writer namespace değerleri aynı olmalıdır. Writer `crm.customer.campaign` namespace'ine yazıyorsa reader da aynı değeri okumalıdır.
+
+## Kod Haritası
+
+| Dosya | Görevi |
+|---|---|
+| `RestSampleCacheReaderApplication.java` | Uygulamayı başlatır |
+| `CacheReaderModule.java` | Cache, servis, handler ve readiness kontrolünü kurar |
+| `CustomerCacheService.java` | Üst seviye cache okuma API'sini kullanır |
+| `CustomerCacheHandler.java` | REST endpoint'lerini açar |
+| `rust-spring.properties` | Lokal ayarları taşır |
+
+Yoğun çağrı alan akış, Redis'te hazır duran JSON byte'larını `RawResponse` ile döner. Büyük bir Java nesne ağacını yeniden oluşturmaz.
 
 ## Maven Package Erişimi
 
-Bu örnek `rust-java-rest` ve `java-rust-cache` bağımlılıklarını GitHub Packages üzerinden çeker. Maven bu paketleri indirebilmek için kimlik bilgisi ister; bu GitHub Packages'in normal erişim modelidir.
+GitHub Packages için `read:packages` yetkili token gerekir. Token'ın private ortak sample repolarına da erişimi olmalıdır.
 
-Maven `settings.xml` dosyana `read:packages` yetkisi olan bir GitHub token eklemelisin. Aşağıdaki `<id>` değerlerini aynı bırak; bu değerler `pom.xml` içindeki repository id'leriyle eşleşmelidir:
+Şu server kimliklerini `~/.m2/settings.xml` dosyasına ekleyin:
 
 ```xml
 <servers>
   <server>
     <id>github-rust-java-rest</id>
-    <username>YOUR_GITHUB_USERNAME</username>
+    <username>GITHUB_KULLANICI_ADI</username>
     <password>${env.GITHUB_PACKAGES_TOKEN}</password>
   </server>
   <server>
     <id>github</id>
-    <username>YOUR_GITHUB_USERNAME</username>
+    <username>GITHUB_KULLANICI_ADI</username>
+    <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+  </server>
+  <server>
+    <id>github-rust-sample-model</id>
+    <username>GITHUB_KULLANICI_ADI</username>
     <password>${env.GITHUB_PACKAGES_TOKEN}</password>
   </server>
 </servers>
 ```
 
-Maven çalıştırmadan önce `GITHUB_PACKAGES_TOKEN` environment variable olarak verilmelidir:
+Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve server kimliklerini kontrol edin.
 
-```powershell
-$env:GITHUB_PACKAGES_TOKEN="READ_PACKAGES_YETKILI_TOKEN"
-mvn -q dependency:resolve
-```
+## Sık Karşılaşılan Sorunlar
 
-Maven `401 Unauthorized` dönerse önce token'ın `read:packages` yetkisini, environment variable'ın shell tarafından görüldüğünü ve server id eşleşmesini kontrol et.
-
-## Container Runtime Notu
-
-Minimal container image kullanıyorsan native extract dizini yazılabilir olmalı:
-
-```bash
--Dreactor.cache.native.extract-dir=/tmp/java-rust-cache/native
-```
-
-Paket içindeki Linux native binary manylinux2014/glibc 2.17 tabanında build edilir. CentOS 8, UBI 8/9, Ubuntu/Jammy ve Semeru/OpenJ9 gibi yaygın glibc tabanlı image’larda çalışması hedeflenir. Custom native build kullanırsan native library’yi platformunun desteklediği en eski Linux base üzerinde build et.
-
-## Gerçek Senaryo
-
-Response’u önceden hazırlanmış Redis read model’den dönebileceğin read-heavy API pod’ları için bu örnek doğru modeldir.
-
-Tipik akış:
-
-1. `rest-sample-cache-writer` yeni bir versioned snapshot yazar.
-2. Bu reader HTTP isteğini alır.
-3. Handler tek bir high-level metot çağırır: `customer(id)` veya `campaignCandidates("retention")`.
-4. Cache library ilgili projection namespace içindeki current version, Redis key ve miss durumunu kendi çözer.
-5. Handler `RawResponse.json(bytes)` döner; Java DTO graph tekrar kurulmaz.
-
-Reader, writer ile aynı projection ayrımını kullanır:
-
-| Endpoint grubu | Reader namespace | Eşleşmesi gereken writer property |
-|---|---|---|
-| Müşteri detayı ve müşteri numarası lookup | `sample.cache.customer.detail.namespace` | `sample.writer.detail.namespace` |
-| Segment listesi | `sample.cache.customer.segment.namespace` | `sample.writer.segment.namespace` |
-| Status listesi | `sample.cache.customer.status.namespace` | `sample.writer.status.namespace` |
-| Kampanya adayları | `sample.cache.customer.campaign.namespace` | `sample.writer.campaign.namespace` |
-| Metadata | `sample.cache.customer.meta.namespace` | `sample.writer.meta.namespace` |
-
-TTL değerleri farklıysa her veri tipini ayrı namespace’te tut. Writer ayrı projection snapshot publish ediyorsa reader endpoint’lerini tek namespace’e yönlendirme.
-
-`sample.cache.customer.projections` reader tarafında hangi projection reader'larının kurulacağını belirler. Writer sadece `detail,campaign` publish ediyorsa reader tarafını da aynı şekilde daraltabilirsin:
-
-```properties
-sample.cache.customer.projections=detail,campaign
-```
-
-Bu değer kodu değiştirmeden reader cache yüzeyini sadeleştirir. Ancak endpoint hâlâ çağrılırsa ve ilgili projection reader içinde yoksa reader kontrollü cache-not-ready/miss response döner. Production'da en temiz kullanım, endpoint seti ile projection setini aynı use case'e göre birlikte seçmektir.
-
-## Deklaratif Projection Config
-
-Projection reader config artık `java-rust-cache` tarafından çözülür:
-
-```java
-List<CacheReaderProjectionSettings> projections =
-        CacheReaderProjectionSettings.resolveAll(properties, "sample.cache.customer");
-
-VersionedJsonProjectionReaders readers =
-        VersionedJsonProjectionReaders.create(
-                cache,
-                projections,
-                properties.getLong("sample.cache.customer.version-cache-ms"));
-
-VersionedJsonProjectionReaders.BoundProjection details =
-        readers.bind(CustomerProjection.DETAIL);
-VersionedJsonProjectionReaders.BoundIndex campaigns =
-        readers.bind(CustomerProjection.CAMPAIGN)
-                .bind(CustomerProjectionIndex.CAMPAIGN);
-```
-
-Library şunları çözer:
-
-- `sample.cache.customer.projections` içindeki aktif projection adları
-- `sample.cache.customer.detail.namespace` gibi projection bazlı namespace değerleri
-- `sample.cache.customer.namespace=crm.customer` gibi base namespace genişletmesi
-
-Hangi endpoint'in hangi projection'ı okuyacağı yine servis kodunda açık kalır:
-
-```java
-public CacheReadResult campaignCandidates(String campaign) {
-    return campaigns.get(campaign);
-}
-```
-
-`CustomerProjection` ve `CustomerProjectionIndex`, ortak `rust-sample-model` artifact'inden gelir.
-Reader ve writer aynı derleme zamanı sözlüğünü kullanır. String değerleri farklı sınıflarda tekrar
-yazılmaz. Bu bağlantılar servis constructor'ında bir kez kurulur. Request sırasında projection map araması
-tekrarlanmaz ve projection adı yeniden çözülmez. Opsiyonel projection yoksa kontrollü
-cache-not-ready sonucu dönmeye devam eder.
-
-Process başlangıcı da açık ve kısadır:
-
-```java
-public static void main(String[] args) {
-    RestApplication.run(CacheReaderModule.INSTANCE);
-}
-```
-
-`CacheReaderModule`, Redis client, service ve handler bağlantılarını tek ve açık bir composition
-sınıfında gösterir. Bu sınıftaki `context.manage(...)`, Redis client yaşam döngüsünü REST uygulamasına
-bağlar. Normal kapanışta ve başlangıç hatasında kaynak güvenli biçimde kapatılır.
-
-Maven build, derlenmiş handler sınıflarından `META-INF/reactor/components.idx` ve
-`META-INF/reactor/routes.idx` dosyalarını üretir. Bu dosyaları elle güncellemeyin. Runtime classpath
-taraması kapalı kalır.
-
-BEST: writer ile aynı config çözümünü kullanmak için library'yi kullanın. Endpoint davranışını ve
-cache miss kararını REST servisinde explicit bırakın.
-
-## Reader TTL ve Namespace Reçeteleri
-
-Reader Redis data TTL değerini belirlemez. TTL kararı writer tarafındadır. Reader aynı namespace adlarını kullanmalı ve sadece current-version pointer değerini ne kadar cache’leyeceğini `sample.cache.customer.version-cache-ms` ile ayarlamalıdır.
-
-### Senaryo: Writer Base Namespace Override Kullanıyor
-
-Writer şu şekilde çalışıyorsa:
-
-```powershell
-java "-Dsample.writer.namespace=crm.customer.prod" `
-  "-Dsample.writer.cache-ttl-ms=900000" `
-  -cp "target\classes;$cp" `
-  com.reactor.sample.cache.writer.app.RestSampleCacheWriterApplication
-```
-
-Reader aynı base namespace ile başlatılmalıdır:
-
-```powershell
-java "-Dsample.cache.customer.namespace=crm.customer.prod" `
-  "-Dsample.cache.customer.version-cache-ms=1000" `
-  "-Dreactor.cache.redis.port=16379" `
-  "-Dserver.port=18080" `
-  -cp "target\classes;$cp" `
-  com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
-```
-
-Reader otomatik olarak `crm.customer.prod.detail`, `crm.customer.prod.segment`, `crm.customer.prod.status`, `crm.customer.prod.campaign` ve `crm.customer.prod.meta` namespace’lerini kullanır. Bütün projection adları aynı base altında duruyorsa en sade deployment şekli budur.
-
-### Senaryo: Production’da Namespace’ler Açık Verilecek
-
-Projection sahipliği ekipler arasında ayrıldıysa veya `<base>.<projection>` formatını kullanmak istemiyorsan namespace’leri açık ver.
-
-```yaml
-env:
-  - name: SAMPLE_CACHE_CUSTOMER_DETAIL_NAMESPACE
-    value: "crm.customer.detail"
-  - name: SAMPLE_CACHE_CUSTOMER_SEGMENT_NAMESPACE
-    value: "crm.customer.segment"
-  - name: SAMPLE_CACHE_CUSTOMER_STATUS_NAMESPACE
-    value: "crm.customer.status"
-  - name: SAMPLE_CACHE_CUSTOMER_CAMPAIGN_NAMESPACE
-    value: "crm.customer.campaign"
-  - name: SAMPLE_CACHE_CUSTOMER_META_NAMESPACE
-    value: "crm.customer.meta"
-  - name: SAMPLE_CACHE_CUSTOMER_VERSION_CACHE_MS
-    value: "1000"
-```
-
-Operasyonel etkisi: Endpointlerin hangi projection’dan okuduğu açıktır. Bedeli, config yüzeyinin artmasıdır. Cache sahipliği netleşmiş production ortamlarında bu model daha güvenlidir.
-
-### Senaryo: Kampanya Yeni Snapshot’ı Hızlı Görmeli
-
-Writer kampanya verisini `30000 ms` aralıkla publish ediyor ve campaign TTL kısa tutuluyorsa reader current pointer cache değeri düşük olmalıdır.
-
-```properties
-sample.cache.customer.version-cache-ms=250
-```
-
-Operasyonel etkisi: Yeni publish daha hızlı görünür. Bedeli, Redis `current` pointer okumasının artmasıdır. Bunu sadece tazeliğin küçük Redis-read azaltımından daha önemli olduğu endpointlerde kullan.
-
-### Senaryo: Çok Yoğun Okunan Endpoint
-
-Endpoint çok trafik alıyor ve yeni publish’in birkaç saniye geç görünmesi kabul edilebiliyorsa pointer cache artırılabilir.
-
-```properties
-sample.cache.customer.version-cache-ms=5000
-```
-
-Operasyonel etkisi: Hot endpointlerde Redis `current` pointer okuması azalır. Bedeli, yeni publish edilen version’ın bu JVM tarafından yaklaşık `5000 ms` daha geç görülebilmesidir.
-
-### Cache Miss Kontrol Listesi
-
-Endpoint `customer_cache_not_ready` veya benzer bir cache miss kodu dönerse önce şunları kontrol et:
-
-```bash
-redis-cli keys 'crm.customer.detail:*'
-redis-cli get crm.customer.detail:current
-redis-cli pttl crm.customer.detail:current
-```
-
-İlk bakılacak noktalar: writer başarılı çalıştı mı, writer ve reader namespace değerleri aynı mı, TTL dolmuş mu, reader aynı Redis topolojisine mi bağlanıyor?
-
-## Endpoint’ler
-
-Local testte servisi `18080` portunda açtıktan sonra:
-
-```bash
-curl http://127.0.0.1:18080/app/health
-curl http://127.0.0.1:18080/api/v1/cache/customers/1
-curl "http://127.0.0.1:18080/api/v1/cache/customers/by-customer-no?customerNo=CUST-1002"
-curl http://127.0.0.1:18080/api/v1/cache/customers/segments/pilot
-curl http://127.0.0.1:18080/api/v1/cache/customers/statuses/active
-curl http://127.0.0.1:18080/api/v1/cache/customers/campaigns/retention/candidates
-curl http://127.0.0.1:18080/api/v1/cache/customers/meta
-curl http://127.0.0.1:18080/api/v1/cache/customers/cache-metrics
-```
-
-## Local Çalıştırma
-
-Önce `rest-sample-cache-writer` bir kez çalışmış ve Redis’e snapshot yazmış olmalı.
-
-Sonra reader’ı başlat:
-
-```powershell
-mvn -q clean package
-mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
-$cp = Get-Content target\cp.txt
-java "-Dreactor.cache.redis.port=16379" `
-  "-Dserver.port=18080" `
-  -cp "target\classes;$cp" `
-  com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
-```
-
-## Production Redis Topolojisi
-
-Local geliştirmede standalone Redis kullanıyoruz çünkü çalıştırması kolay. Production read pod’larında normal tercih Sentinel veya Cluster olmalıdır.
-
-Redis tek writable primary ile çalışıyor ve failover Sentinel tarafından yönetiliyorsa Sentinel kullan:
-
-```yaml
-env:
-  - name: REACTOR_CACHE_REDIS_ACCESS_MODE
-    value: "read-only"
-  - name: REACTOR_CACHE_REDIS_TOPOLOGY
-    value: "sentinel"
-  - name: REACTOR_CACHE_REDIS_NODES
-    value: "redis-sentinel-0:26379,redis-sentinel-1:26379,redis-sentinel-2:26379"
-  - name: REACTOR_CACHE_REDIS_SENTINEL_MASTER_NAME
-    value: "mymaster"
-  - name: REACTOR_CACHE_REDIS_READ_CONNECTIONS
-    value: "2"
-  - name: REACTOR_CACHE_REDIS_MAX_READ_INFLIGHT
-    value: "128"
-```
-
-Redis verisi node’lara bölünüyorsa Cluster kullan:
-
-```yaml
-env:
-  - name: REACTOR_CACHE_REDIS_TOPOLOGY
-    value: "cluster"
-  - name: REACTOR_CACHE_REDIS_NODES
-    value: "redis-cluster-0:6379,redis-cluster-1:6379,redis-cluster-2:6379"
-  - name: REACTOR_CACHE_REDIS_CLUSTER_MAX_REDIRECTS
-    value: "5"
-  - name: REACTOR_CACHE_REDIS_TOPOLOGY_REFRESH_MS
-    value: "30000"
-```
-
-Cluster’da `reactor.cache.redis.database=0` kalmalıdır. Birbiriyle ilişkili key’lerin aynı Redis slot’ta durması gerekiyorsa key tasarımında hash tag kullan: `customer:{1001}:profile` ve `customer:{1001}:orders`.
-
-## Bu Akış Neden Doğru?
-
-| Seçim | Kazanç | Bedel |
-|---|---|---|
-| `RawResponse.json(bytes)` | Her request’te DTO kurma ve JSON serialize etme maliyetini kaldırır | Writer geçerli JSON publish etmeli |
-| Versioned snapshot | Reader yarım yazılmış veri görmez | Writer publish akışı gerekir |
-| Route admission | Düşük memory pod’u burst altında korur | Saturated route kontrollü `503` dönebilir |
-| Java Redis client yok | Classpath küçülür, Redis I/O Rust’a geçer | Redis feature set bilinçli olarak minimaldir |
-
-## Ana Property'ler
-
-| Property | Default | Ne işe yarar? | Ne zaman değiştirirsin? |
-|---|---:|---|---|
-| `reactor.runtime.profile` | `micro-rest` | Düşük memory REST profilini açar. | Redis-backed read API için koru. |
-| `sample.cache.customer.namespace` | `crm.customer` | Tüm projection'lar için base namespace verir. | Writer farklı base namespace kullanıyorsa değiştir. |
-| `sample.cache.customer.projections` | `detail,segment,status,campaign,meta` | Reader içinde kurulacak projection listesidir. | Sadece kullanılan read model'leri okumak istiyorsan daralt. |
-| `sample.cache.customer.detail.namespace` | `crm.customer.detail` | Müşteri detayı okur. | `sample.writer.detail.namespace` ile aynı olmalı. |
-| `sample.cache.customer.segment.namespace` | `crm.customer.segment` | Segment listesi okur. | `sample.writer.segment.namespace` ile aynı olmalı. |
-| `sample.cache.customer.status.namespace` | `crm.customer.status` | Status listesi okur. | `sample.writer.status.namespace` ile aynı olmalı. |
-| `sample.cache.customer.campaign.namespace` | `crm.customer.campaign` | Kampanya adaylarını okur. | `sample.writer.campaign.namespace` ile aynı olmalı. |
-| `sample.cache.customer.meta.namespace` | `crm.customer.meta` | Snapshot metadata okur. | `sample.writer.meta.namespace` ile aynı olmalı. |
-| `sample.cache.customer.version-cache-ms` | `1000` | Redis current-version pointer'ını Java memory'de kısa süre tutar. | Yeni publish hızlı görünsün istiyorsan düşür. Hot read için artır. |
-| `reactor.cache.redis.read-connections` | `2` | Native Redis read connection açar. | Sadece Redis read latency darboğaz ise artır. |
-| `reactor.cache.redis.access-mode` | `read-only` | Yalnız native read plane'i açar. Write çağrısını JNI'ye ulaşmadan reddeder. | Bu reader sample'da `read-only` bırak. Process gerçekten Redis'e yazacaksa `read-write` kullan. |
-| `reactor.cache.redis.max-read-inflight` | `128` | Aynı anda kaç Redis read olacağını sınırlar. | Memory-first pod için düşür. |
-| `reactor.cache.redis.topology` | `standalone` | Redis çalışma modunu seçer. | Production için `sentinel` veya `cluster` kullan. |
-| `reactor.cache.redis.nodes` | empty | Sentinel veya Cluster node listesidir. | Topology `sentinel` veya `cluster` ise doldur. |
-| `reactor.cache.redis.sentinel.master-name` | empty | Sentinel master adıdır. | Sentinel kullanıyorsan zorunludur. |
-| `reactor.cache.redis.sentinel.master-check-ms` | `1000` | Sentinel master değişimini kontrol eder. | Failover toparlanması ölçümde yavaşsa düşür. |
-| `reactor.rust.jni.workers` | `1` | Java REST handler'larını çalıştırır. | Precomputed JSON read için düşük tut. |
-| `reactor.rust.route-admission.*` | route bazlı | Yoğun endpointleri sınırlar. | Global queue artırmadan önce route bazında tune et. |
-
-## Sözlük
-
-| Terim | Anlamı |
+| Belirti | Kontrol edin |
 |---|---|
-| TTL | Redis key yaşam süresidir. Bunu writer belirler. |
-| Version cache | Redis `current` pointer değerinin Java tarafında kısa süre tutulmasıdır. Redis TTL değildir. |
-| Projection | Bir endpoint ailesi için hazır okuma modelidir. |
-| Namespace | Bir projection için Redis key ön ekidir. |
-| RawResponse | Hazır JSON byte verisini DTO kurmadan dönen response tipidir. |
-| Cache miss | Redis'te istenen veri yoktur. |
-| p99 | En yavaş yüzde 1 çağrının latency çizgisidir. p99 yükselirse tail latency kötüdür. |
-| 503 | Kontrollü overload response kodudur. Queue büyütmek yerine pod'u korur. |
-| Sentinel | Redis high availability modudur. Primary failover yönetir. |
-| Cluster | Redis sharding modudur. Veri node'lara bölünür. |
+| Maven build sırasında `401 Unauthorized` | GitHub token ve `settings.xml` server kimlikleri |
+| Readiness `DOWN` | Writer çalıştı mı ve `meta` snapshot'ı var mı? |
+| Endpoint cache miss dönüyor | Reader ve writer veri grubu namespace değerleri |
+| Redis timeout oluşuyor | Redis adresi, bağlantı biçimi ve timeout değerleri |
+| Container native kütüphaneyi yükleyemiyor | Yazılabilir `reactor.cache.native.extract-dir` dizini |
 
-## Production Config Kopyası
+## Ayrıntılı Bilgi
 
-Default `src/main/resources/rust-spring.properties` dosyası localde kolay çalışmak için sade tutuldu. Kubernetes veya container production için `src/main/resources/config/production.properties` dosyasını `-Dreactor.config.file=...` ile overlay olarak kullanın. Bu dosya component/route index üretimini zorunlu tutar, runtime classpath scan fallback'i kapatır, footprint gate'i `enforce` moduna alır ve native pool değerlerini düşük memory hedefiyle küçük başlatır.
+- [Türkçe kullanıcı rehberi](docs/USER_GUIDE.tr.md)
+- [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
+- [Production ayarları](src/main/resources/config/production.properties)
+- [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
+- [v0.4.0 release notları](docs/RELEASE_NOTES_v0.4.0.md)
