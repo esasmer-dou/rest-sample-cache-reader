@@ -78,8 +78,11 @@ Uygulamayı Maven ile çalıştırın:
 
 ```powershell
 mvn -q package
-java -jar target/rest-sample-cache-reader-0.4.0.jar
+mvn -q exec:java
 ```
+
+Üretilen ince JAR yalnızca uygulama sınıflarını içerir. Doğrudan `java -jar` yerine Maven komutunu
+veya bu rehberdeki jlink image akışını kullanın.
 
 Health kontrolü:
 

@@ -6,7 +6,7 @@
 
     <groupId>com.reactor.sample</groupId>
     <artifactId>rest-sample-cache-reader</artifactId>
-    <version>0.4.0</version>
+    <version>0.5.0</version>
     <packaging>jar</packaging>
 
     <name>rest-sample-cache-reader</name>
@@ -15,9 +15,9 @@
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <rust-java-rest.version>4.0.0</rust-java-rest.version>
-        <java-rust-cache.version>0.5.0</java-rust-cache.version>
-        <rust-sample-model.version>0.3.0</rust-sample-model.version>
+        <rust-java-rest.version>4.1.0</rust-java-rest.version>
+        <java-rust-cache.version>0.6.0</java-rust-cache.version>
+        <rust-sample-model.version>0.3.1</rust-sample-model.version>
         <junit.version>5.11.4</junit.version>
     </properties>
 
@@ -38,6 +38,13 @@
             <groupId>com.reactor</groupId>
             <artifactId>java-rust-cache</artifactId>
             <version>${java-rust-cache.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.reactor</groupId>
+            <artifactId>java-rust-cache</artifactId>
+            <version>${java-rust-cache.version}</version>
+            <classifier>codegen</classifier>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.reactor.sample</groupId>
@@ -78,14 +85,17 @@
                     <annotationProcessorPaths>
                         <path>
                             <groupId>com.reactor</groupId>
+                            <artifactId>java-rust-cache</artifactId>
+                            <version>${java-rust-cache.version}</version>
+                            <classifier>codegen</classifier>
+                        </path>
+                        <path>
+                            <groupId>com.reactor</groupId>
                             <artifactId>rust-java-rest</artifactId>
                             <version>${rust-java-rest.version}</version>
                             <classifier>codegen</classifier>
                         </path>
                     </annotationProcessorPaths>
-                    <annotationProcessors>
-                        <annotationProcessor>com.reactor.rust.codegen.ReactorStartupProcessor</annotationProcessor>
-                    </annotationProcessors>
                     <compilerArgs>
                         <arg>-Areactor.codegen.handlers=com.reactor.rust.health.HealthEndpoint</arg>
                     </compilerArgs>

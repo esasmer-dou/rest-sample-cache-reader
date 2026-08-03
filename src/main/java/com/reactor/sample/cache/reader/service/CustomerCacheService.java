@@ -1,75 +1,36 @@
 package com.reactor.sample.cache.reader.service;
 
 import com.reactor.rust.cache.api.CacheReadResult;
-import com.reactor.rust.cache.config.CacheProperties;
-import com.reactor.rust.cache.core.RustCache;
-import com.reactor.rust.cache.projection.CacheReaderProjectionSettings;
-import com.reactor.rust.cache.projection.VersionedJsonProjectionReaders;
-import com.reactor.rust.cache.projection.VersionedJsonProjectionReaders.BoundIndex;
-import com.reactor.rust.cache.projection.VersionedJsonProjectionReaders.BoundProjection;
-import com.reactor.sample.model.cache.CustomerProjection;
-import com.reactor.sample.model.cache.CustomerProjectionIndex;
+import com.reactor.rust.cache.projection.CacheMetricsRead;
+import com.reactor.rust.cache.projection.GenerateProjectionReader;
+import com.reactor.rust.cache.projection.ProjectionIdRead;
+import com.reactor.rust.cache.projection.ProjectionIndexRead;
+import com.reactor.rust.cache.projection.ProjectionMetaRead;
 
-import java.util.List;
+@GenerateProjectionReader(
+        rootPrefix = "sample.cache.customer",
+        generatedName = "CustomerCacheReader",
+        restBean = true)
+public interface CustomerCacheService {
 
-public final class CustomerCacheService {
+    @ProjectionIdRead(projection = "detail")
+    CacheReadResult customer(long id);
 
-    private final RustCache cache;
-    private final BoundProjection customerDetails;
-    private final BoundIndex customersByCustomerNo;
-    private final BoundIndex customersBySegment;
-    private final BoundIndex customersByStatus;
-    private final BoundIndex campaignCandidates;
-    private final BoundProjection metadata;
+    @ProjectionIndexRead(projection = "segment", index = "segment", defaultValue = "standard")
+    CacheReadResult customersBySegment(String segment);
 
-    public CustomerCacheService(RustCache cache, CacheProperties properties) {
-        this(cache, properties, CacheReaderProjectionSettings.resolveAll(properties, "sample.cache.customer"));
-    }
+    @ProjectionIndexRead(projection = "detail", index = "customer-no")
+    CacheReadResult customerByCustomerNo(String customerNo);
 
-    public CustomerCacheService(
-            RustCache cache,
-            CacheProperties properties,
-            List<CacheReaderProjectionSettings> projectionSettings) {
-        this.cache = cache;
-        long versionCacheMillis = properties.getLong("sample.cache.customer.version-cache-ms");
-        VersionedJsonProjectionReaders readers = VersionedJsonProjectionReaders.create(
-                cache,
-                projectionSettings,
-                versionCacheMillis);
-        this.customerDetails = readers.bind(CustomerProjection.DETAIL);
-        this.customersByCustomerNo = customerDetails.bind(CustomerProjectionIndex.CUSTOMER_NO);
-        this.customersBySegment = readers.bind(CustomerProjection.SEGMENT).bind(CustomerProjectionIndex.SEGMENT);
-        this.customersByStatus = readers.bind(CustomerProjection.STATUS).bind(CustomerProjectionIndex.STATUS);
-        this.campaignCandidates = readers.bind(CustomerProjection.CAMPAIGN).bind(CustomerProjectionIndex.CAMPAIGN);
-        this.metadata = readers.bind(CustomerProjection.META);
-    }
+    @ProjectionIndexRead(projection = "status", index = "status", defaultValue = "active")
+    CacheReadResult customersByStatus(String status);
 
-    public CacheReadResult customer(long id) {
-        return customerDetails.getById(id);
-    }
+    @ProjectionIndexRead(projection = "campaign", index = "campaign", defaultValue = "retention")
+    CacheReadResult campaignCandidates(String campaign);
 
-    public CacheReadResult customersBySegment(String segment) {
-        return customersBySegment.get(segment == null || segment.isBlank() ? "standard" : segment);
-    }
+    @ProjectionMetaRead(projection = "meta")
+    CacheReadResult meta();
 
-    public CacheReadResult customerByCustomerNo(String customerNo) {
-        return customersByCustomerNo.get(customerNo == null ? "" : customerNo.trim());
-    }
-
-    public CacheReadResult customersByStatus(String status) {
-        return customersByStatus.get(status == null || status.isBlank() ? "active" : status);
-    }
-
-    public CacheReadResult campaignCandidates(String campaign) {
-        return campaignCandidates.get(campaign == null || campaign.isBlank() ? "retention" : campaign);
-    }
-
-    public CacheReadResult meta() {
-        return metadata.getMeta();
-    }
-
-    public String metricsJson() {
-        return cache.metricsJson();
-    }
-
+    @CacheMetricsRead
+    String metricsJson();
 }

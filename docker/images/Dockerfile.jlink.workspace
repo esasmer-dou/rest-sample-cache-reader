@@ -20,11 +20,14 @@ COPY rust-java-rest/pom.xml rust-java-rest/pom.xml
 COPY rust-java-rest/src rust-java-rest/src
 COPY java-rust-cache/pom.xml java-rust-cache/pom.xml
 COPY java-rust-cache/src java-rust-cache/src
+COPY rust-sample-model/pom.xml rust-sample-model/pom.xml
+COPY rust-sample-model/src rust-sample-model/src
 COPY rest-sample-cache-reader/pom.xml rest-sample-cache-reader/pom.xml
 COPY rest-sample-cache-reader/src rest-sample-cache-reader/src
 
 RUN mvn -q -f rust-java-rest/pom.xml -DskipTests install
 RUN mvn -q -f java-rust-cache/pom.xml -DskipTests install
+RUN mvn -q -f rust-sample-model/pom.xml -DskipTests install
 RUN mvn -q -f rest-sample-cache-reader/pom.xml -DskipTests package dependency:copy-dependencies \
     -DincludeScope=runtime \
     -DoutputDirectory=target/dependency

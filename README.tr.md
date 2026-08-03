@@ -10,7 +10,14 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.0.0`, `java-rust-cache:0.5.0`, `rust-sample-model:0.3.0`.
+Kullanılan sürümler: `rust-java-rest:4.1.0`, `java-rust-cache:0.6.0`, `rust-sample-model:0.3.1`.
+
+## 0.5.0 ile Neler Sadeleşti?
+
+- `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
+- `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
+- Uygulama `@ReactorApplication` ile başlar. Elle yazılmış reader module kaldırıldı.
+- Redis key'leri, projection namespace'leri, REST adresleri ve read-only davranış değişmedi.
 
 ## Buradan Başlayın
 
@@ -132,13 +139,18 @@ Reader ve writer namespace değerleri aynı olmalıdır. Writer `crm.customer.ca
 
 | Dosya | Görevi |
 |---|---|
-| `RestSampleCacheReaderApplication.java` | Uygulamayı başlatır |
-| `CacheReaderModule.java` | Cache, servis, handler ve readiness kontrolünü kurar |
-| `CustomerCacheService.java` | Üst seviye cache okuma API'sini kullanır |
+| `RestSampleCacheReaderApplication.java` | Generated REST ve Rust cache lifecycle'ını açar |
+| `CacheReaderConfiguration.java` | Yalnız readiness endpoint bean'ini tanımlar |
+| `CustomerCacheService.java` | Projection okumalarını tanımlar; implementasyon üretilir |
 | `CustomerCacheHandler.java` | REST endpoint'lerini açar |
 | `rust-spring.properties` | Lokal ayarları taşır |
 
 Yoğun çağrı alan akış, Redis'te hazır duran JSON byte'larını `RawResponse` ile döner. Büyük bir Java nesne ağacını yeniden oluşturmaz.
+
+Uygulama `RustCache`, bound projection veya handler nesnelerini elle kurmaz. `@EnableRustCache`, native
+cache başlangıç ve kapanışını yönetir. `@GenerateProjectionReader`, projection ve index adlarını
+başlangıçta bir kez bağlar. `@ReactorApplication` ve constructor injection, generated reader'ı REST
+handler'a bağlar. Bu yardımcılar derleme sırasında üretilir. Request sırasında reflection eklemez.
 
 ## Maven Package Erişimi
 
@@ -184,4 +196,4 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
-- [v0.4.0 release notları](docs/RELEASE_NOTES_v0.4.0.md)
+- [v0.5.0 release notları](docs/RELEASE_NOTES_v0.5.0.tr.md)

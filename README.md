@@ -10,7 +10,14 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.0.0`, `java-rust-cache:0.5.0`, `rust-sample-model:0.3.0`.
+Current versions: `rust-java-rest:4.1.0`, `java-rust-cache:0.6.0`, `rust-sample-model:0.3.1`.
+
+## What 0.5.0 Simplifies
+
+- `@EnableRustCache` creates one managed native cache lifecycle.
+- `@GenerateProjectionReader` generates the bound customer read implementation.
+- The application starts with `@ReactorApplication`; the handwritten reader module is removed.
+- Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
 
 ## Start Here
 
@@ -132,13 +139,18 @@ Reader and writer namespaces must match. If the writer publishes `crm.customer.c
 
 | File | Why it matters |
 |---|---|
-| `RestSampleCacheReaderApplication.java` | Starts the application |
-| `CacheReaderModule.java` | Creates the cache, service, handlers, and readiness check |
-| `CustomerCacheService.java` | Uses the high-level cache reader API |
+| `RestSampleCacheReaderApplication.java` | Enables generated REST and Rust cache lifecycle |
+| `CacheReaderConfiguration.java` | Declares only the readiness endpoint bean |
+| `CustomerCacheService.java` | Declares projection reads; its implementation is generated |
 | `CustomerCacheHandler.java` | Exposes REST endpoints |
 | `rust-spring.properties` | Local settings |
 
 The frequently used path returns `RawResponse` with the JSON bytes already stored in Redis. It does not rebuild a large Java object tree.
+
+The application does not create `RustCache`, bound projections, or handlers by hand. `@EnableRustCache`
+owns native cache startup/shutdown. `@GenerateProjectionReader` binds projection and index names once
+at startup. `@ReactorApplication` and constructor injection connect the generated reader to the REST
+handler. These helpers are build-time generated and do not add request-time reflection.
 
 ## Maven Package Access
 
@@ -184,4 +196,4 @@ If Maven returns `401`, check the token, repository access, environment variable
 - [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
-- [v0.4.0 release notes](docs/RELEASE_NOTES_v0.4.0.md)
+- [v0.5.0 release notes](docs/RELEASE_NOTES_v0.5.0.md)
