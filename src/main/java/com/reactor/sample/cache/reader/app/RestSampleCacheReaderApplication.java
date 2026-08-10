@@ -5,7 +5,11 @@ import com.reactor.rust.app.RestApplication;
 import com.reactor.rust.cache.integration.EnableRustCache;
 
 @EnableRustCache
-@ReactorApplication(scanBasePackages = "com.reactor.sample.cache.reader")
+@ReactorApplication(
+        name = "Cache Reader Sample",
+        version = "0.6.0",
+        description = "Reads precomputed customer projections from Redis",
+        scanBasePackages = "com.reactor.sample.cache.reader")
 public final class RestSampleCacheReaderApplication {
 
     private RestSampleCacheReaderApplication() {}

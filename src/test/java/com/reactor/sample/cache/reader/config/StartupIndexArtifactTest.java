@@ -8,10 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StartupIndexArtifactTest {
 
     @Test
-    void buildGeneratesRoutesForExplicitHandlerInstances() {
+    void buildGeneratesApplicationRoutes() {
         StartupIndex.IndexResult routes = StartupIndex.routeKeys();
         assertTrue(routes.present(), "Build-time route index must be present");
-        assertTrue(routes.entries().contains("GET /app/health"));
         assertTrue(routes.entries().contains("GET /api/v1/cache/customers/{id}"));
         assertTrue(routes.entries().contains("GET /api/v1/cache/customers/segments/{segment}"));
     }

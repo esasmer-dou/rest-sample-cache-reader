@@ -10,14 +10,30 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.1.0`, `java-rust-cache:0.6.0`, `rust-sample-model:0.3.1`.
+Current versions: `rust-java-rest:4.2.0`, `java-rust-cache:0.7.0`, `rust-sample-model:0.4.0`.
 
-## What 0.5.0 Simplifies
+The POM uses `rust-java-platform-parent` and one `rust-java-starter-cache-reader` dependency. The
+parent aligns REST, cache, DSL-JSON, codegen, and build-gate versions. Code generators stay on the
+compiler path; they are not packaged as runtime classes.
+
+## What 0.6.0 Simplifies
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
 - The application starts with `@ReactorApplication`; the handwritten reader module is removed.
 - Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
+
+## Declarative Flow
+
+| You write | Generated or managed for you | Not created in this process |
+| --- | --- | --- |
+| Projection read contract | Bound projection reader | Redis write pool |
+| REST handler | Constructor wiring and route invoker | PostgreSQL connection pool |
+| Namespace properties | Cache lifecycle and key plan | Scheduler and distributed lock |
+| Readiness dependency | Bounded readiness probe | Full object graph for ready JSON |
+
+Copy the application annotation, the projection contract, and the handler. Do not copy manual
+`RustCache` construction or Redis key concatenation into business code.
 
 ## Start Here
 
@@ -196,4 +212,4 @@ If Maven returns `401`, check the token, repository access, environment variable
 - [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
-- [v0.5.0 release notes](docs/RELEASE_NOTES_v0.5.0.md)
+- [v0.6.0 release notes](docs/RELEASE_NOTES_v0.6.0.md)

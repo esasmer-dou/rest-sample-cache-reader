@@ -10,14 +10,30 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.1.0`, `java-rust-cache:0.6.0`, `rust-sample-model:0.3.1`.
+Kullanılan sürümler: `rust-java-rest:4.2.0`, `java-rust-cache:0.7.0`, `rust-sample-model:0.4.0`.
 
-## 0.5.0 ile Neler Sadeleşti?
+POM, `rust-java-platform-parent` ve tek bir `rust-java-starter-cache-reader` bağımlılığı kullanır.
+Parent; REST, cache, DSL-JSON, codegen ve build gate sürümlerini birlikte yönetir. Kod üreteçleri
+yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
+
+## 0.6.0 ile Neler Sadeleşti?
 
 - `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
 - `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
 - Uygulama `@ReactorApplication` ile başlar. Elle yazılmış reader module kaldırıldı.
 - Redis key'leri, projection namespace'leri, REST adresleri ve read-only davranış değişmedi.
+
+## Deklaratif Akış
+
+| Sizin yazdığınız kod | Framework'ün ürettiği veya yönettiği alan | Bu process'te hiç açılmayan alan |
+| --- | --- | --- |
+| Projection okuma kontratı | Bağlanmış projection reader | Redis write pool |
+| REST handler | Constructor bağlantısı ve route invoker | PostgreSQL connection pool |
+| Namespace property'leri | Cache lifecycle ve key planı | Scheduler ve distributed lock |
+| Readiness dependency | Bounded readiness kontrolü | Hazır JSON için tekrar object graph |
+
+Application annotation, projection kontratı ve handler kodunu alın. Business kodunda elle
+`RustCache` oluşturmayın ve Redis key birleştirmeyin.
 
 ## Buradan Başlayın
 
@@ -196,4 +212,4 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
-- [v0.5.0 release notları](docs/RELEASE_NOTES_v0.5.0.tr.md)
+- [v0.6.0 release notları](docs/RELEASE_NOTES_v0.6.0.tr.md)
