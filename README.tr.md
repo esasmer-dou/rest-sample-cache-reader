@@ -12,6 +12,19 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 
 Kullanılan sürümler: `rust-java-rest:4.3.0`, `java-rust-cache:0.7.1`, `rust-sample-model:0.4.1`.
 
+## Önce Bu Bölümü Okuyun
+
+Redis içinde sürümlü UTF-8 JSON snapshot'ları zaten varsa ve REST uygulaması yalnız okuyacaksa bu
+sample doğru başlangıçtır. Read-through database erişimi, cache yazma veya elle Redis key birleştirme
+için bu projeden başlamayın.
+
+| Hedef | Bölüm |
+| --- | --- |
+| Lokal çalıştırmak | [Hızlı Başlangıç](#hızlı-başlangıç) |
+| Standalone, Sentinel veya Cluster seçmek | [Redis Modunu Seçin](#redis-modunu-seçin) |
+| Yalnız uygulama ayarını değiştirmek | [Konfigürasyon](#konfigürasyon) |
+| Hata çözmek | [Sık Karşılaşılan Sorunlar](#sık-karşılaşılan-sorunlar) |
+
 POM, `rust-java-platform-parent` ve tek bir `rust-java-starter-cache-reader` bağımlılığı kullanır.
 Parent; REST, cache, DSL-JSON, codegen ve build gate sürümlerini birlikte yönetir. Kod üreteçleri
 yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
@@ -43,6 +56,14 @@ Snapshot, Redis'e belirli bir sürümle yazılmış hazır veri setidir.
 
 ```text
 PostgreSQL -> cache writer -> Redis -> bu reader -> HTTP istemcisi
+```
+
+```mermaid
+flowchart LR
+    W["Cache writer"] --> R["Redis içindeki sürümlü JSON"]
+    R --> NR["Native Redis reader"]
+    NR --> J["Java handler"]
+    J --> H["Rust HTTP response"]
 ```
 
 Snapshot üretmeniz gerekiyorsa önce
@@ -205,6 +226,26 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 | Endpoint cache miss dönüyor | Reader ve writer veri grubu namespace değerleri |
 | Redis timeout oluşuyor | Redis adresi, bağlantı biçimi ve timeout değerleri |
 | Container native kütüphaneyi yükleyemiyor | Yazılabilir `reactor.cache.native.extract-dir` dizini |
+
+## Production Kontrol Listesi
+
+- `reactor.cache.redis.access-mode=read-only` değerini koruyun.
+- Reader ve writer namespace adlarını aynı tutun.
+- Gerekli `meta` snapshot veya Redis erişilemiyorsa readiness `DOWN` olmalıdır.
+- Redis connection, max-in-flight read, response byte, HTTP connection ve route admission değerlerini sınırlayın.
+- Tek Redis node kabul edilen availability sınırı değilse Sentinel veya Cluster kullanın.
+- Karışık endpoint ile c64/c256 yük, p99, `503`, RSS, Redis restart/failover ve yük sonrası idle testi yapın.
+- Hazır JSON'u yalnız tekrar serialize etmek için DTO'ya çevirmeyin.
+
+## Kısa Sözlük
+
+| Terim | Basit anlamı |
+| --- | --- |
+| Snapshot | Hazırlanmış okuma modelinin tutarlı biçimde yayınlanmış bir sürümü |
+| Namespace | Bir projection ailesini diğerinden ayıran sabit key prefix'i |
+| Projection | Bir endpoint veya sorgu ailesi için hazırlanmış cache biçimi |
+| Read-only mode | Bu process içinde native Redis write kaynaklarının oluşturulmaması |
+| Readiness | Uygulamanın gerekli bağımlılıklarıyla gerçek trafik sunabilme durumu |
 
 ## Ayrıntılı Bilgi
 

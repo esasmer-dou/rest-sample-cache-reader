@@ -12,6 +12,19 @@ A small REST application that reads ready JSON snapshots from Redis.
 
 Current versions: `rust-java-rest:4.3.0`, `java-rust-cache:0.7.1`, `rust-sample-model:0.4.1`.
 
+## Read This First
+
+Choose this sample when Redis already contains versioned UTF-8 JSON snapshots and the REST service
+only reads them. Do not start here for read-through database access, cache writes, or ad-hoc Redis
+key composition.
+
+| Goal | Go to |
+| --- | --- |
+| Run it locally | [Quick Start](#quick-start) |
+| Pick standalone, Sentinel, or Cluster | [Choose the Redis mode](#choose-the-redis-mode) |
+| Change only application settings | [Configuration](#configuration) |
+| Diagnose a failure | [Common problems](#common-problems) |
+
 The POM uses `rust-java-platform-parent` and one `rust-java-starter-cache-reader` dependency. The
 parent aligns REST, cache, DSL-JSON, codegen, and build-gate versions. Code generators stay on the
 compiler path; they are not packaged as runtime classes.
@@ -43,6 +56,14 @@ A snapshot is a prepared, versioned data set stored in Redis.
 
 ```text
 PostgreSQL -> cache writer -> Redis -> this reader -> HTTP client
+```
+
+```mermaid
+flowchart LR
+    W["Cache writer"] --> R["Versioned JSON in Redis"]
+    R --> NR["Native Redis reader"]
+    NR --> J["Java handler"]
+    J --> H["Rust HTTP response"]
 ```
 
 If you need to build the snapshots, start with
@@ -205,6 +226,26 @@ If Maven returns `401`, check the token, repository access, environment variable
 | Endpoint returns cache miss | Reader and writer data-group namespaces |
 | Redis timeout | Redis address, connection mode, and timeout values |
 | Native library cannot load in a container | Use a writable `reactor.cache.native.extract-dir` |
+
+## Production Checklist
+
+- Keep `reactor.cache.redis.access-mode=read-only`.
+- Keep reader and writer namespace names identical.
+- Make readiness fail when the required `meta` snapshot or Redis dependency is unavailable.
+- Bound Redis connections, max in-flight reads, response bytes, HTTP connections, and route admission.
+- Use Sentinel or Cluster when one Redis node is not an accepted availability boundary.
+- Run mixed endpoint c64/c256 load, p99, `503`, RSS, Redis restart/failover, and post-idle checks.
+- Do not deserialize prepared JSON into DTOs only to serialize the same body again.
+
+## Glossary
+
+| Term | Meaning |
+| --- | --- |
+| Snapshot | One consistently published version of a prepared read model |
+| Namespace | Stable prefix that separates one projection family from another |
+| Projection | Cache shape prepared for one endpoint or query family |
+| Read-only mode | Native Redis write resources are not created in this process |
+| Readiness | Whether the application can serve real traffic with its required dependencies |
 
 ## More Detail
 
