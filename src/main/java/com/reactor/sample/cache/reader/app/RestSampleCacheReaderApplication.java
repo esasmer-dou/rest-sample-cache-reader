@@ -7,7 +7,7 @@ import com.reactor.rust.cache.integration.EnableRustCache;
 @EnableRustCache
 @ReactorApplication(
         name = "Cache Reader Sample",
-        version = "0.6.0",
+        version = "0.6.1",
         description = "Reads precomputed customer projections from Redis",
         scanBasePackages = "com.reactor.sample.cache.reader")
 public final class RestSampleCacheReaderApplication {

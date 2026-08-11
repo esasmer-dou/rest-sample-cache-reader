@@ -10,13 +10,13 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.2.0`, `java-rust-cache:0.7.0`, `rust-sample-model:0.4.0`.
+Current versions: `rust-java-rest:4.3.0`, `java-rust-cache:0.7.1`, `rust-sample-model:0.4.1`.
 
 The POM uses `rust-java-platform-parent` and one `rust-java-starter-cache-reader` dependency. The
 parent aligns REST, cache, DSL-JSON, codegen, and build-gate versions. Code generators stay on the
 compiler path; they are not packaged as runtime classes.
 
-## What 0.6.0 Simplifies
+## What 0.6.1 Aligns
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
@@ -212,4 +212,4 @@ If Maven returns `401`, check the token, repository access, environment variable
 - [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
-- [v0.6.0 release notes](docs/RELEASE_NOTES_v0.6.0.md)
+- [v0.6.1 release notes](docs/RELEASE_NOTES_v0.6.1.md)
