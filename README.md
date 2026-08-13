@@ -10,7 +10,7 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.3.0`, `java-rust-cache:0.7.1`, `rust-sample-model:0.4.1`.
+Current versions: `rust-java-rest:4.4.0`, `java-rust-cache:0.7.2`, `rust-sample-model:0.4.1`.
 
 ## Read This First
 
@@ -29,12 +29,16 @@ The POM uses `rust-java-platform-parent` and one `rust-java-starter-cache-reader
 parent aligns REST, cache, DSL-JSON, codegen, and build-gate versions. Code generators stay on the
 compiler path; they are not packaged as runtime classes.
 
-## What 0.6.1 Aligns
+## What 0.6.2 Aligns
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
 - The application starts with `@ReactorApplication`; the handwritten reader module is removed.
 - Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
+
+The optional Glowroot micro telemetry plane is available through the aligned REST `4.4.0` runtime.
+It is disabled by default. Enable it only when this service must send bounded HTTP and native Redis
+timings to an existing Glowroot Central deployment. No handler or projection code changes.
 
 ## Declarative Flow
 
@@ -253,4 +257,4 @@ If Maven returns `401`, check the token, repository access, environment variable
 - [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
-- [v0.6.1 release notes](docs/RELEASE_NOTES_v0.6.1.md)
+- [v0.6.2 release notes](docs/RELEASE_NOTES_v0.6.2.md)
