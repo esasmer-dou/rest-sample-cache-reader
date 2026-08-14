@@ -10,7 +10,7 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.4.1`, `java-rust-cache:0.7.3`, `rust-sample-model:0.4.1`.
+Kullanılan sürümler: `rust-java-rest:4.5.0`, `java-rust-cache:0.7.4`, `rust-sample-model:0.4.1`.
 
 ## Önce Bu Bölümü Okuyun
 
@@ -29,14 +29,15 @@ POM, `rust-java-platform-parent` ve tek bir `rust-java-starter-cache-reader` ba�
 Parent; REST, cache, DSL-JSON, codegen ve build gate sürümlerini birlikte yönetir. Kod üreteçleri
 yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
 
-## 0.6.3 ile Neler Hizalandı?
+## 0.6.4 ile Neler Hizalandı?
 
 - `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
 - `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
 - Uygulama `@ReactorApplication` ile başlar. Elle yazılmış reader module kaldırıldı.
 - Redis key'leri, projection namespace'leri, REST adresleri ve read-only davranış değişmedi.
+- REST ve cache artık temiz native ABI `29/7/6/3` provenance hattını birlikte kullanır.
 
-İsteğe bağlı Glowroot mikro telemetry katmanı, uyumlu REST `4.4.1` runtime ile kullanılabilir.
+İsteğe bağlı Glowroot mikro telemetry katmanı, uyumlu REST `4.5.0` runtime ile kullanılabilir.
 Varsayılan olarak kapalıdır. Yalnız bu servis mevcut Glowroot Central kurulumuna sınırlandırılmış HTTP
 ve native Redis süreleri gönderecekse açın. Handler veya projection kodu değişmez.
 
@@ -257,4 +258,4 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
-- [v0.6.3 release notları](docs/RELEASE_NOTES_v0.6.3.tr.md)
+- [v0.6.4 sürüm notları](docs/RELEASE_NOTES_v0.6.4.tr.md)
