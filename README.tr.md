@@ -10,7 +10,7 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.5.0`, `java-rust-cache:0.7.4`, `rust-sample-model:0.4.1`.
+Kullanılan sürümler: `rust-java-rest:4.5.6`, `java-rust-cache:0.7.5`, `rust-sample-model:0.4.2`.
 
 ## Önce Bu Bölümü Okuyun
 
@@ -23,13 +23,14 @@ için bu projeden başlamayın.
 | Lokal çalıştırmak | [Hızlı Başlangıç](#hızlı-başlangıç) |
 | Standalone, Sentinel veya Cluster seçmek | [Redis Modunu Seçin](#redis-modunu-seçin) |
 | Yalnız uygulama ayarını değiştirmek | [Konfigürasyon](#konfigürasyon) |
+| Glowroot telemetrisini açmak | [Glowroot Agent ile Telemetri](#glowroot-agent-ile-telemetri) |
 | Hata çözmek | [Sık Karşılaşılan Sorunlar](#sık-karşılaşılan-sorunlar) |
 
 POM, `rust-java-platform-parent` ve tek bir `rust-java-starter-cache-reader` bağımlılığı kullanır.
 Parent; REST, cache, DSL-JSON, codegen ve build gate sürümlerini birlikte yönetir. Kod üreteçleri
 yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
 
-## 0.6.4 ile Neler Hizalandı?
+## 0.6.5 ile Neler Hizalandı?
 
 - `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
 - `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
@@ -37,7 +38,7 @@ yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
 - Redis key'leri, projection namespace'leri, REST adresleri ve read-only davranış değişmedi.
 - REST ve cache artık temiz native ABI `29/7/6/3` provenance hattını birlikte kullanır.
 
-İsteğe bağlı Glowroot mikro telemetry katmanı, uyumlu REST `4.5.0` runtime ile kullanılabilir.
+İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.5.6` çalışma katmanıyla kullanılabilir.
 Varsayılan olarak kapalıdır. Yalnız bu servis mevcut Glowroot Central kurulumuna sınırlandırılmış HTTP
 ve native Redis süreleri gönderecekse açın. Handler veya projection kodu değişmez.
 
@@ -177,6 +178,89 @@ java "-Dreactor.config.file=src/main/resources/config/production.properties;src/
 
 Reader ve writer namespace değerleri aynı olmalıdır. Writer `crm.customer.campaign` namespace'ine yazıyorsa reader da aynı değeri okumalıdır.
 
+## Glowroot Agent ile Telemetri
+
+Bu uygulama Rust-Java REST üzerinde çalışır. Ayrı bir Spring starter veya agent çalışma katmanı
+gerekmez. Telemetri varsayılan olarak kapalıdır. Açıldığında HTTP route ve native Redis read süreleri
+aynı Rust çalışma katmanında toplanır. Handler ve projection kodu değişmez.
+
+Bu sample, Glowroot ABI `3` taşıyan production platform `4.5.6` sürümünü kullanır. İsteğe bağlı
+`java-rust-glowroot-agent:0.4.0` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
+gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
+
+```xml
+<parent>
+  <groupId>com.reactor</groupId>
+  <artifactId>rust-java-platform-parent</artifactId>
+  <version>4.5.6</version>
+  <relativePath/>
+</parent>
+```
+
+Lokal kullanım için `rust-spring.properties` dosyasına şu değerleri ekleyin:
+
+```properties
+reactor.glowroot.enabled=true
+reactor.glowroot.profile=micro
+reactor.glowroot.collector.address=http://127.0.0.1:8181
+reactor.glowroot.agent.id=cache-reader-local
+reactor.glowroot.application.name=rest-sample-cache-reader
+reactor.glowroot.http.sample-rate=256
+reactor.glowroot.trace.capacity=0
+```
+
+`reactor.native.capabilities` değerini ayrıca tanımlıyorsanız gerekli yüzeyleri açıkça ekleyin:
+
+```properties
+reactor.native.capabilities=http,redis,glowroot
+```
+
+Kubernetes'te aynı ayarları environment variable olarak verin:
+
+```yaml
+env:
+  - name: REACTOR_GLOWROOT_ENABLED
+    value: "true"
+  - name: REACTOR_GLOWROOT_PROFILE
+    value: "micro"
+  - name: REACTOR_GLOWROOT_COLLECTOR_ADDRESS
+    value: "http://glowroot-collector.observability.svc.cluster.local:8181"
+  - name: REACTOR_GLOWROOT_AGENT_ID
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
+  - name: REACTOR_GLOWROOT_APPLICATION_NAME
+    value: "rest-sample-cache-reader"
+```
+
+Uygulama başladıktan sonra agent durumunu kontrol edin:
+
+```powershell
+curl.exe http://127.0.0.1:18080/diagnostics/glowroot
+```
+
+| İhtiyaç | Profil | Kullanım |
+|---|---|---|
+| Normal production trafiği | `micro` | HTTP, Redis, RSS, thread ve exporter sağlığı |
+| Heap veya GC araştırması | `jvm` | Tek podda geçici olarak açın |
+| SQL ölçümü | Kullanmayın | Reader PostgreSQL'e bağlanmaz |
+| Hata ve JVM incelemesi | `full` | Kısa inceleme süresi için kullanın |
+| Thread veya heap çıktısı | `diagnostic` | Yalnız yetkili operasyon sırasında açın |
+
+`micro` production gate'i en fazla bir exporter thread'i ve `3 MiB` yerleşik bellek sınırıyla
+doğrulanmıştır. Collector erişilemezse reader trafiği devam eder. Gönderilemeyen telemetri sınırlı
+drop sayaçlarına yansır. `/diagnostics/glowroot` endpoint'ini public ingress'e açmayın.
+
+Agent'i kullanmayacaksanız şu varsayılanı koruyun:
+
+```properties
+reactor.glowroot.enabled=false
+```
+
+Ayrıntılı profil ve çalışma sırasında geçiş örnekleri için
+[`java-rust-glowroot-agent`](https://github.com/esasmer-dou/java-rust-glowroot-agent/blob/master/README.tr.md)
+dokümanını kullanın.
+
 ## Kod Haritası
 
 | Dosya | Görevi |
@@ -231,6 +315,7 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 | Endpoint cache miss dönüyor | Reader ve writer veri grubu namespace değerleri |
 | Redis timeout oluşuyor | Redis adresi, bağlantı biçimi ve timeout değerleri |
 | Container native kütüphaneyi yükleyemiyor | Yazılabilir `reactor.cache.native.extract-dir` dizini |
+| Glowroot verisi görünmüyor | `enabled`, collector adresi, agent id ve `/diagnostics/glowroot` çıktısı |
 
 ## Production Kontrol Listesi
 
@@ -241,6 +326,7 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - Tek Redis node kabul edilen availability sınırı değilse Sentinel veya Cluster kullanın.
 - Karışık endpoint ile c64/c256 yük, p99, `503`, RSS, Redis restart/failover ve yük sonrası idle testi yapın.
 - Hazır JSON'u yalnız tekrar serialize etmek için DTO'ya çevirmeyin.
+- Agent açıksa `micro` ile başlayın; geniş profilleri yalnız kısa ve yetkili inceleme için açın.
 
 ## Kısa Sözlük
 
@@ -251,6 +337,7 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 | Projection | Bir endpoint veya sorgu ailesi için hazırlanmış cache biçimi |
 | Read-only mode | Bu process içinde native Redis write kaynaklarının oluşturulmaması |
 | Readiness | Uygulamanın gerekli bağımlılıklarıyla gerçek trafik sunabilme durumu |
+| Telemetri profili | Agent'in o anda topladığı veri ve ayırdığı sınırlı kaynak yüzeyi |
 
 ## Ayrıntılı Bilgi
 
@@ -258,4 +345,4 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
-- [v0.6.4 sürüm notları](docs/RELEASE_NOTES_v0.6.4.tr.md)
+- [v0.6.5 sürüm notları](docs/RELEASE_NOTES_v0.6.5.tr.md)

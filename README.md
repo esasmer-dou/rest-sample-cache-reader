@@ -10,7 +10,7 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.5.0`, `java-rust-cache:0.7.4`, `rust-sample-model:0.4.1`.
+Current versions: `rust-java-rest:4.5.6`, `java-rust-cache:0.7.5`, `rust-sample-model:0.4.2`.
 
 ## Read This First
 
@@ -23,13 +23,14 @@ key composition.
 | Run it locally | [Quick Start](#quick-start) |
 | Pick standalone, Sentinel, or Cluster | [Choose the Redis mode](#choose-the-redis-mode) |
 | Change only application settings | [Configuration](#configuration) |
+| Enable Glowroot telemetry | [Glowroot Telemetry](#glowroot-telemetry) |
 | Diagnose a failure | [Common problems](#common-problems) |
 
 The POM uses `rust-java-platform-parent` and one `rust-java-starter-cache-reader` dependency. The
 parent aligns REST, cache, DSL-JSON, codegen, and build-gate versions. Code generators stay on the
 compiler path; they are not packaged as runtime classes.
 
-## What 0.6.4 Aligns
+## What 0.6.5 Aligns
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
@@ -37,7 +38,7 @@ compiler path; they are not packaged as runtime classes.
 - Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
 - REST and cache now share the clean native ABI `29/7/6/3` provenance line.
 
-The optional Glowroot micro telemetry plane is available through the aligned REST `4.5.0` runtime.
+The optional Glowroot micro telemetry plane is available through the aligned REST `4.5.6` runtime.
 It is disabled by default. Enable it only when this service must send bounded HTTP and native Redis
 timings to an existing Glowroot Central deployment. No handler or projection code changes.
 
@@ -177,6 +178,89 @@ java "-Dreactor.config.file=src/main/resources/config/production.properties;src/
 
 Reader and writer namespaces must match. If the writer publishes `crm.customer.campaign`, the reader must use the same campaign namespace.
 
+## Glowroot Telemetry
+
+This application runs on Rust-Java REST. It does not need a Spring starter or a separate agent
+runtime dependency. Telemetry is disabled by default. When enabled, HTTP routes and native Redis
+read timings are collected inside the same Rust runtime. Handler and projection code do not change.
+
+This sample already uses the production platform `4.5.6` with Glowroot ABI `3`. The optional
+`java-rust-glowroot-agent:0.4.0` JAR is needed only when you want `-javaagent` syntax; the embedded
+REST telemetry runtime does not require a separate agent dependency:
+
+```xml
+<parent>
+  <groupId>com.reactor</groupId>
+  <artifactId>rust-java-platform-parent</artifactId>
+  <version>4.5.6</version>
+  <relativePath/>
+</parent>
+```
+
+Add these values to `rust-spring.properties` for local use:
+
+```properties
+reactor.glowroot.enabled=true
+reactor.glowroot.profile=micro
+reactor.glowroot.collector.address=http://127.0.0.1:8181
+reactor.glowroot.agent.id=cache-reader-local
+reactor.glowroot.application.name=rest-sample-cache-reader
+reactor.glowroot.http.sample-rate=256
+reactor.glowroot.trace.capacity=0
+```
+
+If you explicitly set `reactor.native.capabilities`, include every required surface:
+
+```properties
+reactor.native.capabilities=http,redis,glowroot
+```
+
+Supply the same settings through environment variables in Kubernetes:
+
+```yaml
+env:
+  - name: REACTOR_GLOWROOT_ENABLED
+    value: "true"
+  - name: REACTOR_GLOWROOT_PROFILE
+    value: "micro"
+  - name: REACTOR_GLOWROOT_COLLECTOR_ADDRESS
+    value: "http://glowroot-collector.observability.svc.cluster.local:8181"
+  - name: REACTOR_GLOWROOT_AGENT_ID
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
+  - name: REACTOR_GLOWROOT_APPLICATION_NAME
+    value: "rest-sample-cache-reader"
+```
+
+Check the local agent state after startup:
+
+```powershell
+curl.exe http://127.0.0.1:18080/diagnostics/glowroot
+```
+
+| Need | Profile | Use |
+|---|---|---|
+| Normal production traffic | `micro` | HTTP, Redis, RSS, thread, and exporter health |
+| Heap or GC investigation | `jvm` | Enable temporarily on one pod |
+| SQL timing | Do not use | This reader does not connect to PostgreSQL |
+| Error and JVM investigation | `full` | Use for a short incident window |
+| Thread or heap output | `diagnostic` | Use only for an authorized operation |
+
+The `micro` production gate allows at most one exporter thread and a `3 MiB` resident-memory
+boundary. A collector outage does not stop reader traffic. Unsent telemetry is reflected in bounded
+drop counters. Do not expose `/diagnostics/glowroot` through a public ingress.
+
+Keep the default when telemetry is not required:
+
+```properties
+reactor.glowroot.enabled=false
+```
+
+See the
+[`java-rust-glowroot-agent`](https://github.com/esasmer-dou/java-rust-glowroot-agent/blob/master/README.md)
+guide for runtime profile switching and the complete property reference.
+
 ## Code Map
 
 | File | Why it matters |
@@ -231,6 +315,7 @@ If Maven returns `401`, check the token, repository access, environment variable
 | Endpoint returns cache miss | Reader and writer data-group namespaces |
 | Redis timeout | Redis address, connection mode, and timeout values |
 | Native library cannot load in a container | Use a writable `reactor.cache.native.extract-dir` |
+| Glowroot data is missing | Check `enabled`, collector address, agent id, and `/diagnostics/glowroot` |
 
 ## Production Checklist
 
@@ -241,6 +326,7 @@ If Maven returns `401`, check the token, repository access, environment variable
 - Use Sentinel or Cluster when one Redis node is not an accepted availability boundary.
 - Run mixed endpoint c64/c256 load, p99, `503`, RSS, Redis restart/failover, and post-idle checks.
 - Do not deserialize prepared JSON into DTOs only to serialize the same body again.
+- Start agent use with `micro`; raise profiles only for short, authorized investigations.
 
 ## Glossary
 
@@ -251,6 +337,7 @@ If Maven returns `401`, check the token, repository access, environment variable
 | Projection | Cache shape prepared for one endpoint or query family |
 | Read-only mode | Native Redis write resources are not created in this process |
 | Readiness | Whether the application can serve real traffic with its required dependencies |
+| Telemetry profile | The bounded data and resource surface currently enabled in the agent |
 
 ## More Detail
 
@@ -258,4 +345,4 @@ If Maven returns `401`, check the token, repository access, environment variable
 - [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
-- [v0.6.4 release notes](docs/RELEASE_NOTES_v0.6.4.md)
+- [v0.6.5 release notes](docs/RELEASE_NOTES_v0.6.5.md)
