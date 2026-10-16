@@ -10,7 +10,7 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.6.2`, `java-rust-cache:0.7.6`, `rust-sample-model:0.4.2`.
+Kullanılan sürümler: `rust-java-rest:4.6.3`, `java-rust-cache:0.7.7`, `rust-sample-model:0.4.3`.
 
 ## Önce Bu Bölümü Okuyun
 
@@ -32,8 +32,8 @@ yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
 
 ## Güncel Kaynak Ayarları
 
-Bu kaynak ağacı platform parent `4.6.2` kullanır. Sample sürümü `0.6.5` olarak kalır.
-Bu hizalamayı kullanmak için kaynak kodu yeniden derleyin. Yayınlanmış sample paketi güncellenmedi.
+`0.6.6` sürümü platform parent `4.6.3` kullanır. Uygulamayı hizalanmış bağımlılıklarla
+yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.6.6.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
 
 - `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
 - `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
@@ -41,7 +41,7 @@ Bu hizalamayı kullanmak için kaynak kodu yeniden derleyin. Yayınlanmış samp
 - Redis key'leri, projection namespace'leri, REST adresleri ve read-only davranış değişmedi.
 - REST, ABI `29/7/6/6` hattını kullanır. Cache paketi kendi Redis ABI `6` sözleşmesini doğrular.
 
-İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.6.2` çalışma katmanıyla kullanılabilir.
+İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.6.3` çalışma katmanıyla kullanılabilir.
 Varsayılan olarak kapalıdır. Yalnız bu servis mevcut Glowroot Central kurulumuna sınırlandırılmış HTTP
 ve native Redis süreleri gönderecekse açın. Handler veya projection kodu değişmez.
 
@@ -187,7 +187,7 @@ Bu uygulama Rust-Java REST üzerinde çalışır. Ayrı bir Spring starter veya 
 gerekmez. Telemetri varsayılan olarak kapalıdır. Açıldığında HTTP route ve native Redis read süreleri
 aynı Rust çalışma katmanında toplanır. Handler ve projection kodu değişmez.
 
-Bu sample, Glowroot ABI `6` taşıyan production platform `4.6.2` sürümünü kullanır. İsteğe bağlı
+Bu sample, Glowroot ABI `6` taşıyan production platform `4.6.3` sürümünü kullanır. İsteğe bağlı
 `java-rust-glowroot-agent:0.5.4` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
 gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 
@@ -195,7 +195,7 @@ gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.6.2</version>
+  <version>4.6.3</version>
   <relativePath/>
 </parent>
 ```
@@ -348,4 +348,4 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
-- [v0.6.5 sürüm notları](docs/RELEASE_NOTES_v0.6.5.tr.md)
+- [v0.6.6 sürüm notları](docs/RELEASE_NOTES_v0.6.6.tr.md)
