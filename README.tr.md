@@ -188,7 +188,7 @@ gerekmez. Telemetri varsayılan olarak kapalıdır. Açıldığında HTTP route 
 aynı Rust çalışma katmanında toplanır. Handler ve projection kodu değişmez.
 
 Bu sample, Glowroot ABI `6` taşıyan production platform `4.6.3` sürümünü kullanır. İsteğe bağlı
-`java-rust-glowroot-agent:0.5.4` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
+`java-rust-glowroot-agent:0.6.0` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
 gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 
 ```xml
