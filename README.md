@@ -12,7 +12,7 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.7.0`, `java-rust-cache:0.8.0`, `rust-sample-model:0.4.4`.
+Current versions: `rust-java-rest:4.7.1`, `java-rust-cache:0.8.0`, `rust-sample-model:0.4.4`.
 
 ## Read This First
 
@@ -34,7 +34,12 @@ compiler path; they are not packaged as runtime classes.
 
 ## Current Checkout
 
-Version `0.7.1` uses platform parent `4.7.0`. Rebuild the application with the aligned
+This update aligns the platform with REST `4.7.1` and optional agent `0.7.0`.
+Use the native file packaged with the dependency you selected. Do not mix older SO/DLL files.
+Business code, URLs and configuration keys stay the same. Telemetry remains disabled by default.
+The HTTP micro memory gate does not guarantee the same overhead for a database job or a richer profile.
+
+Version `0.7.1` uses platform parent `4.7.1`. Rebuild the application with the aligned
 dependencies. See [release notes](docs/RELEASE_NOTES_v0.7.1.md). Runtime settings and URLs are unchanged.
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
@@ -43,7 +48,7 @@ dependencies. See [release notes](docs/RELEASE_NOTES_v0.7.1.md). Runtime setting
 - Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
 - REST uses the `29/7/6/6` ABI line. The cache package verifies its own Redis ABI `6` contract.
 
-The optional Glowroot micro telemetry plane is available through the aligned REST `4.7.0` runtime.
+The optional Glowroot micro telemetry plane is available through the aligned REST `4.7.1` runtime.
 It is disabled by default. Enable it only when this service must send bounded HTTP and native Redis
 timings to an existing Glowroot Central deployment. No handler or projection code changes.
 
@@ -189,7 +194,7 @@ This application runs on Rust-Java REST. It does not need a Spring starter or a 
 runtime dependency. Telemetry is disabled by default. When enabled, HTTP routes and native Redis
 read timings are collected inside the same Rust runtime. Handler and projection code do not change.
 
-This sample already uses the production platform `4.7.0` with Glowroot ABI `6`. The optional
+This sample already uses the production platform `4.7.1` with Glowroot ABI `6`. The optional
 `java-rust-glowroot-agent:0.7.0` JAR is needed only when you want `-javaagent` syntax; the embedded
 REST telemetry runtime does not require a separate agent dependency:
 
@@ -197,7 +202,7 @@ REST telemetry runtime does not require a separate agent dependency:
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.7.0</version>
+  <version>4.7.1</version>
   <relativePath/>
 </parent>
 ```
