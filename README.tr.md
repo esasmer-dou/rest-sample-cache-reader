@@ -34,8 +34,8 @@ yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
 
 ## Güncel Kaynak Ayarları
 
-`0.7.0` sürümü platform parent `4.7.0` kullanır. Uygulamayı hizalanmış bağımlılıklarla
-yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.7.0.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
+`0.7.1` sürümü platform parent `4.7.0` kullanır. Uygulamayı hizalanmış bağımlılıklarla
+yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.7.1.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
 
 - `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
 - `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
@@ -190,7 +190,7 @@ gerekmez. Telemetri varsayılan olarak kapalıdır. Açıldığında HTTP route 
 aynı Rust çalışma katmanında toplanır. Handler ve projection kodu değişmez.
 
 Bu sample, Glowroot ABI `6` taşıyan production platform `4.7.0` sürümünü kullanır. İsteğe bağlı
-`java-rust-glowroot-agent:0.6.0` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
+`java-rust-glowroot-agent:0.7.0` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
 gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 
 ```xml
@@ -350,4 +350,4 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
-- [v0.7.0 sürüm notları](docs/RELEASE_NOTES_v0.7.0.tr.md)
+- [v0.7.1 sürüm notları](docs/RELEASE_NOTES_v0.7.1.tr.md)

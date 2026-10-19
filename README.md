@@ -34,8 +34,8 @@ compiler path; they are not packaged as runtime classes.
 
 ## Current Checkout
 
-Version `0.7.0` uses platform parent `4.7.0`. Rebuild the application with the aligned
-dependencies. See [release notes](docs/RELEASE_NOTES_v0.7.0.md). Runtime settings and URLs are unchanged.
+Version `0.7.1` uses platform parent `4.7.0`. Rebuild the application with the aligned
+dependencies. See [release notes](docs/RELEASE_NOTES_v0.7.1.md). Runtime settings and URLs are unchanged.
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
@@ -190,7 +190,7 @@ runtime dependency. Telemetry is disabled by default. When enabled, HTTP routes 
 read timings are collected inside the same Rust runtime. Handler and projection code do not change.
 
 This sample already uses the production platform `4.7.0` with Glowroot ABI `6`. The optional
-`java-rust-glowroot-agent:0.6.0` JAR is needed only when you want `-javaagent` syntax; the embedded
+`java-rust-glowroot-agent:0.7.0` JAR is needed only when you want `-javaagent` syntax; the embedded
 REST telemetry runtime does not require a separate agent dependency:
 
 ```xml
@@ -350,4 +350,4 @@ If Maven returns `401`, check the token, repository access, environment variable
 - [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
-- [v0.7.0 release notes](docs/RELEASE_NOTES_v0.7.0.md)
+- [v0.7.1 release notes](docs/RELEASE_NOTES_v0.7.1.md)
