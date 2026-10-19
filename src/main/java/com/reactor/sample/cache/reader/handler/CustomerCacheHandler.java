@@ -15,6 +15,7 @@ import com.reactor.sample.cache.reader.service.CustomerCacheService;
 @RestController("/api/v1/cache/customers")
 @RouteWorkload(RouteWorkload.Type.CACHE_READ)
 public final class CustomerCacheHandler {
+    private static final boolean COMMON_ERRORS = com.reactor.rust.config.PropertiesLoader.getBoolean("sample.errors.common-contract", false);
 
     private final CustomerCacheService customerCache;
 
@@ -62,6 +63,6 @@ public final class CustomerCacheHandler {
     }
 
     private static ResponseEntity<RawResponse> toResponse(CacheReadResult result, String missCode) {
-        return CacheResponses.json(result, missCode, "customer_cache_not_ready");
+        return COMMON_ERRORS ? CacheResponses.problem(result) : CacheResponses.json(result, missCode, "customer_cache_not_ready");
     }
 }
