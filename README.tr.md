@@ -12,7 +12,7 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.7.1`, `java-rust-cache:0.8.0`, `rust-sample-model:0.4.4`.
+Kullanılan sürümler: `rust-java-rest:4.7.1`, `java-rust-cache:0.8.1`, `rust-sample-model:0.4.4`.
 
 ## Önce Bu Bölümü Okuyun
 

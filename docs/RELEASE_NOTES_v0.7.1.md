@@ -4,7 +4,8 @@
 
 Optional bootstrap examples now use agent 0.7.0. Normal applications use the embedded REST 4.7.1 exporter; no extra agent dependency is needed.
 
-Platform moves to 4.7.1; cache/Dubbo 0.8.0 and shared contracts 0.4.4.
+Platform moves to 4.7.1; cache 0.8.1, Dubbo 0.8.0 and shared contracts 0.4.4.
+The updated cache native runtime also fixes rapid telemetry close/restart ownership.
 Existing endpoints, SQL, payloads and error contracts do not change. Telemetry remains disabled by default.
 Java keeps business logic. Enabled telemetry uses bounded Rust export and resource management.
 
