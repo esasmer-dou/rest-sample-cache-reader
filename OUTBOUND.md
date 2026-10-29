@@ -2,10 +2,12 @@
 
 [English](OUTBOUND.md) | [Turkish](OUTBOUND.tr.md)
 
-This optional source-checkout example uses generated HTTP clients, a circuit
-breaker and a native HS256 filter. These additions are not in the published
-4.8.0 native package. The normal Redis reader is unchanged. Do not combine the
-`outbound`, `native-view` and default application builds.
+Build this optional sample profile from the source checkout; its application is
+not in the default published `0.8.0` reader JAR. It uses generated HTTP clients,
+a circuit breaker and a native HS256 filter. The published `4.8.0` native package
+already includes `outbound-http` and `edge-jwt`; no native rebuild is needed just
+to include those features. The normal Redis reader is unchanged. Do not combine
+the `outbound`, `native-view` and default application builds.
 
 ## What Runs Where?
 
@@ -22,10 +24,12 @@ There is no Redis or database call in this build. Native HTTP currently accepts
 `http://` only. Choose `reactor.http-client.transport=jdk` for HTTPS, proxies or
 HTTP/2. A native HTTPS URL fails at startup; it is never silently downgraded.
 
-## Build From Matching Sources
+## Build With Matching Dependencies
 
-Build/install the matching core, platform and starters first. Use a native library
-with both Cargo features `outbound-http,edge-jwt` when enabling both examples.
+Resolve the matching published `4.8.0` core, platform and starters with Maven,
+then build this sample profile. Use their matching native library, which already
+contains `outbound-http,edge-jwt`. A custom native build is only needed if you
+deliberately select an artifact without the required features.
 See [native HTTP build requirements](https://github.com/esasmer-dou/rust-java-rest/blob/master/platform/starter-http-client/NATIVE-INTEGRATION.md).
 
 ```sh

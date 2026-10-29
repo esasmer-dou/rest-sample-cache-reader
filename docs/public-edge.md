@@ -4,7 +4,10 @@
 
 Use this example for the same anonymous product JSON shared by every visitor.
 Keep customer, tenant and authorization-dependent data in the normal sample.
-These additions are not in the published `0.8.0` sample or `0.9.0` cache package.
+Build the `public-edge` sample application from this checkout; it is not in the
+default published `0.8.0` reader JAR. The matching published REST `4.8.0` and cache
+`0.9.0` native packages already include `edge-cache` support. Sample application
+availability and native feature availability are separate.
 
 ## Choose the Path
 
@@ -40,9 +43,9 @@ java -Drust.lib.path=/app/native/librust_hyper.so \
 ```
 
 On Windows, use `;` instead of `:` in the classpath and supply the matching DLL.
-This source preview needs coordinated source-built dependencies and a matching
-native artifact containing the `edge-cache` feature. An ordinary published SO
-does not gain this feature by changing a property. Missing native support fails
+Use matching published dependencies and a native artifact containing `edge-cache`,
+as included in the REST `4.8.0` / cache `0.9.0` packages. A property cannot add
+support to a different native file that lacks it. Missing native support fails
 startup instead of silently installing a different policy.
 
 `sample.public.edge.enabled=false` is the default. It installs neither native

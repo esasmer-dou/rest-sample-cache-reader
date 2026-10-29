@@ -4,7 +4,10 @@
 
 Bu örneği, bütün ziyaretçilere aynı ürün JSON'unu sunmak için kullanın.
 Müşteri, kullanıcı ve yetkiye bağlı verileri normal sample içinde bırakın.
-Bu ekler yayımlanmış `0.8.0` sample veya `0.9.0` cache paketinde henüz yoktur.
+`public-edge` sample uygulamasını bu kaynak koddan derleyin; uygulama yayımlanmış
+varsayılan `0.8.0` reader JAR'ında yoktur. Eşleşen yayımlanmış REST `4.8.0` ve cache
+`0.9.0` native paketleri zaten `edge-cache` desteği içerir. Sample uygulamasının
+yayımlanması ile native özelliğin bulunması ayrı konulardır.
 
 ## Hangi Yolu Seçmeliyim?
 
@@ -39,9 +42,9 @@ java -Drust.lib.path=/app/native/librust_hyper.so \
 ```
 
 Windows'ta classpath ayıracı olarak `:` yerine `;` kullanın. Eşleşen DLL yolunu verin.
-Bu kaynak kod önizlemesi, birlikte derlenmiş bağımlılıklar ve `edge-cache`
-özelliğini içeren eşleşen native dosya gerektirir. Yayımlanmış normal SO dosyasına
-bir property değişikliğiyle bu özellik eklenmez. Native destek eksikse başlangıç
+Eşleşen yayımlanmış bağımlılıkları ve REST `4.8.0` / cache `0.9.0` paketlerinde
+bulunan `edge-cache` desteğini içeren native dosyayı kullanın. Bu desteği içermeyen
+başka bir native dosyaya property ile özellik eklenmez. Native destek eksikse başlangıç
 hata verir; farklı bir politika sessizce devreye alınmaz.
 
 Varsayılan değer `sample.public.edge.enabled=false` olur. Native cache ve hız

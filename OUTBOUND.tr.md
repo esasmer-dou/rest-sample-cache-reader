@@ -2,10 +2,12 @@
 
 [English](OUTBOUND.md) | [Turkish](OUTBOUND.tr.md)
 
-Bu örnek kaynak koddan derlenir. Generated HTTP istemcisi, devre kesici ve native
-HS256 filtresi kullanır. Bu ekler yayımlanmış 4.8.0 native paketinde yoktur.
-Normal Redis okuyucusu değişmez. `outbound`, `native-view` ve varsayılan uygulama
-profillerini aynı derlemede birleştirmeyin.
+Bu isteğe bağlı sample profilini kaynak koddan derleyin; uygulaması yayımlanmış
+varsayılan `0.8.0` reader JAR'ında yoktur. Generated HTTP istemcisi, devre kesici
+ve native HS256 filtresi kullanır. Yayımlanmış `4.8.0` native paketi zaten
+`outbound-http` ve `edge-jwt` içerir; yalnız bu özellikler için native derleme
+gerekmez. Normal Redis okuyucusu değişmez. `outbound`, `native-view` ve varsayılan
+uygulama profillerini aynı derlemede birleştirmeyin.
 
 ## Hangi İşi Kim Yapar?
 
@@ -23,11 +25,12 @@ kabul eder. HTTPS, proxy veya HTTP/2 gerekiyorsa
 `reactor.http-client.transport=jdk` seçin. Native HTTPS adresi başlangıçta hata
 verir. Bağlantı gizlice HTTP'ye çevrilmez.
 
-## Eşleşen Kaynakları Derleyin
+## Eşleşen Bağımlılıklarla Derleyin
 
-Önce eşleşen core, platform ve starter kaynaklarını yerel Maven deponuza kurun.
-İki örneği de açacaksanız native kütüphanede `outbound-http,edge-jwt` Cargo
-özellikleri bulunmalıdır. [Native derleme rehberi](https://github.com/esasmer-dou/rust-java-rest/blob/master/platform/starter-http-client/NATIVE-INTEGRATION.tr.md)
+Eşleşen yayımlanmış `4.8.0` core, platform ve starter paketlerini Maven ile
+çözümleyin, ardından sample profilini derleyin. Eşleşen native kütüphane zaten
+`outbound-http,edge-jwt` içerir. Yalnız gerekli özellikleri içermeyen özel bir
+artifact seçerseniz native derleme gerekir. [Native derleme rehberi](https://github.com/esasmer-dou/rust-java-rest/blob/master/platform/starter-http-client/NATIVE-INTEGRATION.tr.md)
 gerekli artifact'leri açıklar.
 
 ```sh

@@ -22,8 +22,9 @@ erişimiyle çözümleyin. Yayım her native binary'nin slab/FFM yeteneği taş�
 anlamına gelmez. Eşleşen, kabul edilmiş native dosyayı kullanın; yetenek yoksa
 eşleşen kaynak revision'dan ilgili feature'ı derleyin.
 [Özellik seçimi/okuma maliyeti](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.tr.md).
-OpenJ9 JNI slab için Cargo `--release --features shared-slab` kullanılır.
-Normal panic-abort motoru korunur. Yalnız HotSpot FFM için
+Yayımlanmış `4.8.0` native paketi, OpenJ9 JNI için zaten `shared-slab` içerir;
+normal panic-abort motoru korunur ve bu yol için native derleme gerekmez.
+Yalnız HotSpot FFM için kabul edilmiş bir native derlemede
 `--profile release-ffm --features ffm-fast` gerekir. Abort profilinde FFM yeteneği
 sıfırdır; foreign API etkinleşmez. Mevcut native ABI numaraları değişmez.
 
