@@ -6,10 +6,10 @@
 
 Gerçek projection okuma akışı, isteğe bağlı sürümlü L1 ve sahipliği izlenen JSON yanıtlarını destekler. Ayrı profiller public edge, native view, JWT, izleme, ortak tampon ve dış HTTP çağrısını gösterir. Varsayılan uygulama yalnız Redis'ten okur.
 
-[Kullanım rehberi](docs/functional-operations.md) · [Sürüm notları](docs/RELEASE_NOTES_v0.8.0.md)
+[Kullanım rehberi](docs/functional-operations.tr.md) · [Sürüm notları](docs/RELEASE_NOTES_v0.8.0.tr.md)
 
 
-Yeni kullanım rehberi: [Yeni kullanım örnekleri](docs/functional-operations.tr.md).
+Özellik, çalıştırma ve hata eşleştirmesi: [Kullanım örnekleri](docs/functional-operations.tr.md).
 
 Kaynak kod örneği: [Rust'a ait binary buffer'ı okuyup JSON üretme](NATIVE_VIEW.tr.md).
 Ayrı `native-view` derlemesi, varsayılan Redis okuyucusunu değiştirmez.
@@ -23,7 +23,7 @@ Kaynak kod örneği: [Açık anahtarla JWT ve sınırlı token önbelleği](JWT_
 Kaynak kod örneği: [Bir isteği HTTP servisleri arasında izleyin](TRACE_PROPAGATION.tr.md).
 Ayrı `trace-propagation` derlemesi W3C parent ID ve retry başlık korumasını gösterir.
 
-Yalnız kaynak derlemesinde: [Ham Redis JSON verisini sınırlı shared slab ile döndürme](SHARED_SLAB.tr.md).
+İsteğe bağlı örnek: [Ham Redis JSON verisini sınırlı shared slab ile döndürme](SHARED_SLAB.tr.md).
 Ayrı `shared-slab` derlemesinde handler Java'da kalır. OpenJ9 JNI slab kullanır; uygun HotSpot için FFM seçilebilir.
 Sürümlü projection okuması ve varsayılan okuyucu değişmez.
 
@@ -48,7 +48,7 @@ için bu projeden başlamayın.
 | Lokal çalıştırmak | [Hızlı Başlangıç](#hızlı-başlangıç) |
 | Standalone, Sentinel veya Cluster seçmek | [Redis Modunu Seçin](#redis-modunu-seçin) |
 | Yalnız uygulama ayarını değiştirmek | [Konfigürasyon](#konfigürasyon) |
-| Sık okunan JSON'u bu uygulamada tekrar kullanmak | [İsteğe bağlı L1 okuma](#isteğe-bağlı-l1-okuma-kaynak-kod) |
+| Sık okunan JSON'u bu uygulamada tekrar kullanmak | [İsteğe bağlı L1 okuma](#isteğe-bağlı-l1-okuma) |
 | Herkese açık ürün kataloğunu Rust edge ile sunmak | [Public katalog kaynak kod örneği](docs/public-edge.tr.md) |
 | Glowroot telemetrisini açmak | [Glowroot Agent ile Telemetri](#glowroot-agent-ile-telemetri) |
 | Hata çözmek | [Sık Karşılaşılan Sorunlar](#sık-karşılaşılan-sorunlar) |
@@ -210,20 +210,15 @@ java "-Dreactor.config.file=src/main/resources/config/production.properties;src/
 | `rust-spring.properties` | Küçük lokal varsayılanlar |
 | `config/production.properties` | Güvenli production limitleri ve timeout'lar |
 | `config/advanced-tuning.properties` | Route limitleri, native trim ve namespace override'ları |
-| `config/l1.properties` | Bu kaynak sürümünde detail/segment için isteğe bağlı, sınırlı L1 alanı |
+| `config/l1.properties` | Detail/segment için isteğe bağlı, sınırlı L1 alanı; temel ayarlarda kapalı |
 
 Reader ve writer namespace değerleri aynı olmalıdır. Writer `crm.customer.campaign` namespace'ine yazıyorsa reader da aynı değeri okumalıdır.
 
-## İsteğe Bağlı L1 Okuma (Kaynak Kod)
+## İsteğe Bağlı L1 Okuma
 
-Bu kaynak değişikliği, isteğe bağlı L1 okuyucusunu ekler. Henüz yayımlanmış cache
-`0.9.0` paketinde bulunmaz. Önce uyumlu cache kütüphanesini ve kod üretecini yerelde derleyin:
-
-```powershell
-mvn -B -ntp -f ../rust-java-rest/pom.xml install
-mvn -B -ntp -f ../java-rust-cache/pom.xml install
-mvn -B -ntp clean verify
-```
+Sample `0.8.0`, yayımlanmış cache `0.9.0` L1 okuyucusunu REST/platform `4.8.0` ile kullanır.
+Hizalanmış paketleri ve pakete ait native dosyayı kullanın. Kardeş kütüphaneleri
+kaynaktan derlemek ön koşul değildir. L1 isteğe bağlı kalır.
 
 Aynı müşteri veya segment sık isteniyorsa L1 kullanabilirsiniz. Sürümlü verinin kaynağı
 yine Redis'tir. L1'de bulunan JSON için Redis'ten tekrar veri alınmaz. Java handler,
@@ -243,9 +238,10 @@ public interface CustomerCacheService {
 }
 ```
 
-Handler'da `CacheResponses.valueProblem(customerCache.customerValue(id))` döndürün.
+Gerçek ID ve segment handler'ları `CacheReadValue` kullanır: varsayılan yardımcı
+`CacheResponses.valueJson(...)`, `sample.errors.common-contract=true` seçilirse `CacheResponses.valueProblem(...)` olur.
 L1 kapalıysa Redis'ten gelen byte dizisi doğrudan raw yanıta aktarılır. Snapshot
-sarmalayıcısı oluşturulmaz. L1 açıksa aynı metot sahipliği kontrollü snapshot döndürür.
+sarmalayıcısı oluşturulmaz. L1 açıksa value, sahipliği kontrollü snapshot taşır.
 Yanıt yazıcısı, yazma veya iptal sonrasında pin'i bırakır. Yardımcı metoda devrettikten
 sonra handler'da kapatmayın. Mevcut result ve snapshot API'leri de korunur.
 
@@ -274,7 +270,7 @@ mvn -q `
 | `sample.cache.customer.l1.max-entries=0` | Kendi etkin ayarı olmayan projection'ları kapalı bırakır. JVM veya genel ortam ayarıyla 0 verilirse hepsini kapatır. |
 | `sample.cache.customer.version-cache-ms=1000` | Sıralı okumada snapshot sürümünü en fazla saniyede bir kontrol eder. Süresi dolan eşzamanlı okumalar ayrı kontrol yapabilir. |
 
-İki sabit veri alanının toplamı yaklaşık 0,17 MiB'dir. Bu değer uygulamanın toplam RSS'i
+İki sabit veri alanının toplamı process/replica başına yaklaşık 0,17 MiB'dir. Bu değer uygulamanın toplam RSS'i
 değildir. Status, campaign ve meta doğrudan Redis'ten okunur. Boyut sınırını aşan veri
 L1'e alınmaz; normal okuma devam eder.
 
@@ -287,25 +283,26 @@ ve `sample.cache.customer.segment.l1.max-bytes=655360` kullanabilirsiniz. Bu se�
 daha fazla sabit bellek ayırır. Büyük yanıtlar nadirse küçük reçeteyi koruyun;
 bu yanıtlar yine Redis üzerinden döner.
 
-ID ile müşteri ve segment endpoint'leri artık sahipliği izlenen snapshot kullanır.
-L1 hit'inde veri, Java payload dizisi oluşturulmadan sabit alandan native HTTP buffer'a
-yazılır. Bu, ağda sıfır kopya anlamına gelmez. Sabit alandan yanıt buffer'ına kopya kalır.
+L1 hit'inde `CacheReadValue` yanıtı, sahipliği izlenen native handle'ı REST yanıt
+yazıcısına devreder. Veri, Java payload dizisi oluşturulmadan sabit alandan native
+HTTP buffer'a kopyalanır. Java handler yine çalışır; bu akış ağda sıfır kopya değildir.
 Büyük native frame, gönderim bitene kadar Rust tarafında tutulur. Havuza dönmesi,
 bu alanın hemen işletim sistemine bırakılacağı anlamına gelmez.
-Üretilen okuyucu snapshot'ı doğrudan pinler; arada geçici lease nesnesi oluşturmaz.
 Mevcut `CacheReadResult` metotları bağımsız byte dizisi döndürmeye devam eder.
 
-L1 kapalıyken Redis yine `byte[]` döndürür. Snapshot yalnız bu sonucun sahipliğini
-alır. Sabit bellek alanı açılmaz; ancak küçük sahiplik nesneleri oluşur.
+L1 kapalıyken mevcut value route'u Redis `byte[]` sonucunu raw body olarak döndürür;
+snapshot sarmalayıcısı oluşturmaz. Açık `customerSnapshot(...)` / `segmentSnapshot(...)`
+çağrıları ayrı sahiplik API'sidir; Redis-only modda da küçük sahiplik nesneleri oluşturur.
 L1, daha az Redis çağrısı için ek yerel bellek kullanır. RSS'in mutlaka düşmesini
 sağlamaz. En düşük bellek önceliğinde normal Redis-only ayarını koruyun.
 
 | İhtiyacınız | Seçim |
 | --- | --- |
-| Hazır JSON'u değiştirmeden sunmak | `CacheReadSnapshot` ve `CacheResponses.ownedJson(...)` |
+| Hazır JSON'u mevcut HTTP route'larından sunmak | `CacheReadValue` ve `valueJson(...)` / `valueProblem(...)` |
+| Özel kodda snapshot sahipliğini açıkça yönetmek | `CacheReadSnapshot` ve `CacheResponses.ownedJson(...)` |
 | Java'da JSON byte'larını incelemek veya değiştirmek | Mevcut `CacheReadResult` metotları |
 
-Kendi controller'ınızda kullanım örneği:
+Kendi controller'ınız için alternatif açık sahiplik örneği (mevcut handler implementasyonu değildir):
 
 ```java
 @GetMapping("/{id}")
@@ -443,7 +440,9 @@ dokümanını kullanın.
 | `CustomerCacheHandler.java` | REST endpoint'lerini açar |
 | `rust-spring.properties` | Lokal ayarları taşır |
 
-Yoğun çağrı alan akış, Redis'te hazır duran JSON byte'larını `RawResponse` ile döner. Büyük bir Java nesne ağacını yeniden oluşturmaz.
+ID ve segment route'ları `CacheReadValue`, diğer cache route'ları `CacheReadResult`
+ve raw JSON yanıtı kullanır. Büyük bir Java nesne ağacı yeniden kurulmaz. Redis-only
+byte dizisi ile native yanıt sahipliğinin farkı için L1 bölümüne bakın.
 
 Uygulama `RustCache`, bound projection veya handler nesnelerini elle kurmaz. `@EnableRustCache`, native
 cache başlangıç ve kapanışını yönetir. `@GenerateProjectionReader`, projection ve index adlarını
@@ -485,6 +484,7 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 | Maven build sırasında `401 Unauthorized` | GitHub token ve `settings.xml` server kimlikleri |
 | Readiness `DOWN` | Writer çalıştı mı ve `meta` snapshot'ı var mı? |
 | Endpoint cache miss dönüyor | Reader ve writer veri grubu namespace değerleri |
+| Hazır olmayan cache `404` veya `503` dönüyor | Varsayılan eski sözleşme `404`, isteğe bağlı ortak hata sözleşmesi `503` kullanır. [Hata tablosuna](docs/functional-operations.tr.md#http-hata-tablosu) bakın |
 | Redis timeout oluşuyor | Redis adresi, bağlantı biçimi ve timeout değerleri |
 | Container native kütüphaneyi yükleyemiyor | Yazılabilir `reactor.cache.native.extract-dir` dizini |
 | Glowroot verisi görünmüyor | `enabled`, collector adresi, agent id ve `/diagnostics/glowroot` çıktısı |
@@ -514,7 +514,8 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 ## Ayrıntılı Bilgi
 
 - [Türkçe kullanıcı rehberi](docs/USER_GUIDE.tr.md)
-- [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
+- [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf) (önceki kopya; bu düzeltmeler için Markdown'ı kullanın)
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
 - [v0.8.0 sürüm notları](docs/RELEASE_NOTES_v0.8.0.tr.md)
+- [Henüz yayımlanmamış belge düzeltmeleri](docs/RELEASE_NOTES_UNRELEASED.tr.md)

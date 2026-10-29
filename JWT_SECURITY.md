@@ -2,8 +2,12 @@
 
 [English](JWT_SECURITY.md) | [Turkish](JWT_SECURITY.tr.md)
 
-This is an isolated **source-checkout** example. It is not part of the published
-4.8.0 package. The default Redis reader and its HS256 settings do not change.
+This isolated sample profile uses the published REST/security 4.8.0 artifacts.
+The sample sources are in this repository, not inside the framework JAR. This
+profile describes this checkout; it is not a claim that these additions shipped
+in the published sample 0.8.0 JAR. Build the selected profile below. The
+default Redis reader and its HS256 settings do not change. See the bilingual
+[feature/consumer map](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.md).
 
 ## Choose The Right Path
 
@@ -20,10 +24,16 @@ There is no remote JWKS fetch, extra executor or refresh thread.
 
 ## Run The Example
 
-Build the current framework/platform sources first. Then:
+Run the following in Bash from the current `rest-sample-cache-reader` checkout.
+Prerequisites: full JDK 21 (including `jdk.crypto.ec`), Maven 3.9+, curl, a free
+8080 port and authenticated Maven access to the aligned REST/platform 4.8.0 set.
+For changed framework sources, install the matching artifacts first;
+source installation is not a prerequisite for using the published packages.
 
 ```sh
-mvn -Pjwt-security clean package -DskipTests
+set -eu
+mvn -B -ntp -Pjwt-security clean package dependency:copy-dependencies \
+  -DskipTests -DincludeScope=runtime "-DoutputDirectory=$PWD/target-jwt-security/lib"
 ```
 
 This profile uses REST and security only. It does not start Redis, Dubbo or an
@@ -37,37 +47,80 @@ The example loads three **X.509 DER public-key** files from a trusted directory:
 For an actual service, keep only the trusted algorithms/keys in your startup
 provider. See [the single-key provider example](https://github.com/esasmer-dou/rust-java-rest/blob/master/platform/starter-security/README.md).
 
-For a local identity-provider fixture, public keys can be exported as follows:
+The [JDK-only development issuer](https://github.com/esasmer-dou/rust-java-rest/blob/master/examples/tools/AsymmetricJwtDemo.java)
+generates RSA-2048, P-256 and Ed25519 keys, then signs actual tokens. No OpenSSL,
+Node or runtime dependency is needed. It deliberately refuses an existing key
+directory. Private keys stay outside the checkout and the REST public-key directory.
+On POSIX they are owner-only; on Windows restrict the temporary directory ACL to
+the issuer account before use. This is not a production identity provider.
 
 ```sh
-mkdir -p keys
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out issuer-rsa.pem
-openssl pkey -in issuer-rsa.pem -pubout -outform DER -out keys/RS256.der
-openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:prime256v1 -out issuer-ec.pem
-openssl pkey -in issuer-ec.pem -pubout -outform DER -out keys/ES256.der
-openssl genpkey -algorithm ED25519 -out issuer-ed.pem
-openssl pkey -in issuer-ed.pem -pubout -outform DER -out keys/EdDSA.der
+JWT_TOOL=../rust-java-rest/examples/tools/AsymmetricJwtDemo.java
+JWT_WORK=$(mktemp -d)
+java "$JWT_TOOL" keys "$JWT_WORK/issuer"
+java "-Dsample.jwt.public-key-directory=$JWT_WORK/issuer/public" \
+  -Dsample.jwt.cache.enabled=true \
+  -cp 'target-jwt-security/rest-sample-cache-reader-0.8.0.jar:target-jwt-security/lib/*' \
+  com.reactor.sample.jwt.JwtApplication >"$JWT_WORK/server.log" 2>&1 &
+JWT_PID=$!
+trap 'kill "$JWT_PID" 2>/dev/null || true' EXIT
+curl --fail --retry 20 --retry-connrefused --retry-delay 1 --retry-max-time 45 \
+  --max-time 2 http://localhost:8080/api/v1/jwt/health
+
+for ALG in RS256 ES256 EdDSA; do
+  ACCESS_TOKEN=$(java "$JWT_TOOL" token "$JWT_WORK/issuer" "$ALG" reader)
+  curl --fail --max-time 5 -H "Authorization: Bearer $ACCESS_TOKEN" \
+    http://localhost:8080/api/v1/jwt/me
+done
+READER_TOKEN=$(java "$JWT_TOOL" token "$JWT_WORK/issuer" RS256 reader)
+ADMIN_TOKEN=$(java "$JWT_TOOL" token "$JWT_WORK/issuer" ES256 admin)
+curl --fail --max-time 5 -H "Authorization: Bearer $ADMIN_TOKEN" \
+  http://localhost:8080/api/v1/jwt/admin
+test "$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $READER_TOKEN" http://localhost:8080/api/v1/jwt/admin)" = 403
+for CASE in expired wrong-issuer wrong-audience wrong-kid; do
+  BAD_TOKEN=$(java "$JWT_TOOL" token "$JWT_WORK/issuer" RS256 "$CASE")
+  test "$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bearer $BAD_TOKEN" http://localhost:8080/api/v1/jwt/me)" = 401
+done
+test "$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+  http://localhost:8080/api/v1/jwt/me)" = 401
+unset ACCESS_TOKEN READER_TOKEN ADMIN_TOKEN BAD_TOKEN
+kill "$JWT_PID"
+wait "$JWT_PID" || true
+trap - EXIT
 ```
 
-Keep private keys with the issuer, never inside this REST image. These commands
-do not issue access tokens. Your issuer must sign a compact JWT with matching
-`alg`/`kid`, issuer `sample-issuer`, audience `sample-api`, subject `sample-user`,
-role `reader`, and a future `exp`.
+Use the Linux classpath separator above; Windows uses `;`. The helper emits only
+the token on stdout. `alg` and `kid` are exactly `RS256`, `ES256` or `EdDSA`;
+claims are `iss=sample-issuer`, `aud=sample-api`, `sub=sample-user`,
+`roles=["reader"]` (admin adds `admin`), `iat=now`, `exp=now+300` seconds.
+ES256 uses JWS's 64-byte P1363 `r||s`, not DER. Never log tokens or use shell tracing.
+After stopping the server, remove the disposable `$JWT_WORK` directory including
+its private keys. Mount/copy only `issuer/public` into a REST image, never `issuer`.
+
+### Errors And Helper Checks
+
+| Symptom | Action |
+| --- | --- |
+| Startup cannot read keys | Set an absolute public directory; all three X.509 DER files must exist, each 1..4096 bytes. PEM and PKCS8 are not public-key inputs. |
+| Algorithm unavailable | Use a full JDK 21 / include `jdk.crypto.ec` in jlink; do not fall back to HS256. |
+| Connection refused / readiness fails | Inspect `$JWT_WORK/server.log`, port 8080 and matching Java/native versions; do not retry another server on the same port. |
+| Valid test token returns 401 | Issue it again after startup (five-minute TTL), check clock, matching public keys, `alg`/`kid`, issuer/audience. |
+| Reader on `/admin` returns 403 | Expected authorization result; use the admin scenario to obtain 200. |
+| 503 | Bounded crypto/admission capacity is exhausted; this is not a bad-token 401. |
+
+Run these independent signature/claim/negative-input checks with a full JDK 21:
 
 ```sh
-mvn -Pjwt-security exec:java \
-  -Dsample.jwt.public-key-directory=/absolute/path/keys \
-  -Dsample.jwt.cache.enabled=true
+mkdir -p target-jwt-security/helper-checks
+javac -d target-jwt-security/helper-checks \
+  ../rust-java-rest/examples/tools/AsymmetricJwtDemo.java \
+  ../rust-java-rest/examples/tools/AsymmetricJwtDemoChecks.java
+java -cp target-jwt-security/helper-checks AsymmetricJwtDemoChecks
 ```
 
-```sh
-curl http://localhost:8080/api/v1/jwt/health
-curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8080/api/v1/jwt/me
-```
-
-`/health` is public. `/me` requires `reader` and checks the Java identity context.
-`/admin` requires `admin`; a reader-only token receives `403`.
-Invalid/missing/expired credentials receive `401`.
+These checks do not replace service HTTP/security or paired-container acceptance.
 
 ## Configure The Cache
 

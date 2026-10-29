@@ -2,8 +2,11 @@
 
 [English](NATIVE_VIEW.md) | [Turkish](NATIVE_VIEW.tr.md)
 
-Bu örnek **kaynak kod deposundadır**. Yayımlanmış `4.8.0` paketinde henüz yoktur.
-Varsayılan Redis okuyucusu değişmedi.
+Bu ayrı kaynak profili yayımlanmış REST/codegen `4.8.0` API'lerini kullanır.
+Sample framework JAR'ına dahil değildir. Varsayılan Redis okuyucusu değişmez.
+[Özellik seçimi/okuma maliyeti](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.tr.md).
+Bu profil güncel checkout'u anlatır; önceki sample 0.8.0 JAR'ında bulunduğu iddia
+edilmez. Aşağıdaki profili kaynaklardan derleyin.
 
 ## İçindekiler
 
@@ -34,12 +37,13 @@ endpoint'leri eklenmez. Ortak modeldeki sade record, serializer'ı otomatik kayd
 
 ## Örneği Çalıştırın
 
-Java 21 kullanın. Sample dizininde önce aynı kaynak sürümünü derleyin:
+Java 21, Maven 3.9+, boş 8080 portu ve REST/platform 4.8.0,
+model 0.5.0 paketlerine GitHub Packages erişimi gerekir. Sample dizininde seçili
+profili derleyin. Framework/model kaynağını değiştirdiyseniz önce
+eşleşen paketleri install edin; yayımlanmış paket için kaynak install gerekmez.
 
 ```shell
-mvn -B -ntp -f ../rust-java-rest/pom.xml install -DskipTests
-mvn -B -ntp -f ../rust-sample-model/pom.xml install -DskipTests
-mvn -B -ntp -Pnative-view package -DskipTests
+mvn -B -ntp -Pnative-view clean package -DskipTests
 mvn -B -ntp -Pnative-view dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target-native-view/lib
 ```
 

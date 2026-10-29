@@ -6,6 +6,8 @@ Redis anahtarında döndürmek istediğiniz JSON zaten hazırsa bu ayrı örneğ
 Anahtarı ve yanıtı Java seçer. Rust, Redis'i okur ve HTTP yazımı bitene kadar
 veriyi tutar. FFM yolunda Java payload `byte[]` dizisi oluşmaz. Bu örnek,
 varsayılan sürümlü okuyucunun yerine geçmez.
+Bu checkout'un profilini derleyin; POM'un 0.8.0 kalması bu eklemelerin önceki
+sample yayımında bulunduğunun kanıtı değildir.
 
 Slab, sabit boyutlu native bellek alanıdır. Lease, bir slotun geçici sahipliğidir.
 Snapshot kapanınca slot yeniden kullanılabilir. JNI mevcut Java/Rust köprüsüdür.
@@ -13,12 +15,24 @@ FFM ise Java'nın isteğe bağlı foreign-function API'sidir. OpenJ9, JNI slab k
 
 ## Örneği Çalıştırma
 
-Bu ekleme henüz yayımlanmadı. Önce eşleşen kaynak modülleri derleyin:
-`rust-java-ffm-fast`, `rust-java-ffm-cache` ve eşleşen Linux kütüphanesi.
+Bu sample dizininden çalıştırın. JDK 21, Maven 3.9+,
+curl, redis-cli, 127.0.0.1:6379 üzerinde geçici Redis ve boş 8080 portu gerekir.
+Yayımlanmış 4.8.0 `rust-java-ffm-fast`/`rust-java-ffm-cache` modüllerini Maven
+erişimiyle çözümleyin. Yayım her native binary'nin slab/FFM yeteneği taşıdığı
+anlamına gelmez. Eşleşen, kabul edilmiş native dosyayı kullanın; yetenek yoksa
+eşleşen kaynak revision'dan ilgili feature'ı derleyin.
+[Özellik seçimi/okuma maliyeti](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.tr.md).
 OpenJ9 JNI slab için Cargo `--release --features shared-slab` kullanılır.
 Normal panic-abort motoru korunur. Yalnız HotSpot FFM için
 `--profile release-ffm --features ffm-fast` gerekir. Abort profilinde FFM yeteneği
 sıfırdır; foreign API etkinleşmez. Mevcut native ABI numaraları değişmez.
+
+Native kaynak derlemesi gerekiyorsa kardeş `rust-spring` dizininde
+`cargo build --release --features shared-slab` (OpenJ9 JNI) veya
+`cargo build --profile release-ffm --features ffm-fast` (HotSpot FFM) çalıştırın.
+Sırasıyla `target/release/librust_hyper.so` veya `target/release-ffm/librust_hyper.so`
+çıktısını `rust.lib.path` olarak kullanın. Aşağıdaki `/app/native/librust_hyper.so`,
+seçtiğiniz dosyanın deployment konumudur; Maven bu yolu oluşturmaz.
 
 ```sh
 mvn -B -ntp -Pshared-slab clean package dependency:copy-dependencies \
@@ -122,7 +136,7 @@ Slab süreç ömürlüdür. Okuyucu kapanınca istemci ve girdi wrapper'ları b�
 slab OS'a verilmez. Snapshot ve FFM segment nesneleri hâlâ oluşur. Bu akış uçtan
 uca sıfır allocation veya sıfır kopya değildir. Normal örneğin varsayılanları ve
 sürümlü snapshot tutarlılığı değişmez.
-[Modül ayrıntıları](../rust-java-rest/platform/ffm-cache/README.tr.md).
+[Modül ayrıntıları](https://github.com/esasmer-dou/rust-java-rest/blob/master/platform/ffm-cache/README.tr.md).
 
 ## Native Bellek
 

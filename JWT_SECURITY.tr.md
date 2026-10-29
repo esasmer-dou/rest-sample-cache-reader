@@ -2,8 +2,11 @@
 
 [English](JWT_SECURITY.md) | [Turkish](JWT_SECURITY.tr.md)
 
-Bu örnek yalnız **güncel kaynak kodla** çalışır. Yayımlanan 4.8.0 paketinde henüz
-yoktur. Varsayılan Redis reader ve mevcut HS256 ayarları değişmez.
+Bu ayrı sample profili yayımlanmış REST/security 4.8.0 paketlerini kullanır.
+Sample kaynakları bu depodadır; framework JAR'ına dahil değildir. Varsayılan Redis
+profili dışındaki eklemeler bu checkout'u anlatır; yayımlanmış sample 0.8.0 JAR'ında
+bulundukları iddia edilmez. Aşağıdaki seçili profili kaynaklardan derleyin. Normal
+reader ve HS256 ayarları değişmez. [Özellik/tüketici haritası](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.tr.md).
 
 ## Hangi Yolu Seçmeliyim?
 
@@ -20,10 +23,16 @@ Ağdan anahtar arama, yeni executor veya yenileme thread'i başlatılmaz.
 
 ## Örneği Çalıştırın
 
-Önce güncel framework/platform kaynaklarını derleyin. Ardından:
+Aşağıdaki komutları güncel checkout'ta Bash ile `rest-sample-cache-reader`
+dizininde çalıştırın. Tam JDK 21 (`jdk.crypto.ec` dahil), Maven 3.9+, curl, boş
+8080 portu ve hizalı REST/platform 4.8.0 paketlerine Maven erişimi gerekir.
+Framework kaynağı değiştiyse eşleşen paketleri önce install edin;
+yayımlanmış paketleri kullanmak için kaynak derlemesi zorunlu değildir.
 
 ```sh
-mvn -Pjwt-security clean package -DskipTests
+set -eu
+mvn -B -ntp -Pjwt-security clean package dependency:copy-dependencies \
+  -DskipTests -DincludeScope=runtime "-DoutputDirectory=$PWD/target-jwt-security/lib"
 ```
 
 Bu profil yalnız REST ve security kullanır. Redis, Dubbo veya dış HTTP istemcisi
@@ -38,37 +47,81 @@ Gerçek servisinizde yalnız güvendiğiniz anahtarları ve algoritmaları tanı
 [Tek anahtarlı provider örneği](https://github.com/esasmer-dou/rust-java-rest/blob/master/platform/starter-security/README.tr.md)
 bu seçimi gösterir.
 
-Yerel kimlik sunucusu denemesinde açık anahtarları şu şekilde çıkarabilirsiniz:
+[Yalnız JDK kullanan geliştirme issuer'ı](https://github.com/esasmer-dou/rust-java-rest/blob/master/examples/tools/AsymmetricJwtDemo.java)
+RSA-2048, P-256 ve Ed25519 anahtarlarını ve gerçek imzalı token'ları üretir.
+OpenSSL, Node veya runtime bağımlılığı gerekmez. Var olan anahtar dizinini
+üzerine yazmaz. Özel anahtarlar checkout ve REST açık-anahtar dizininin dışında
+kalır. POSIX izinleri yalnız sahibine açıktır; Windows'ta geçici dizinin ACL'ini
+kullanmadan önce issuer hesabıyla sınırlayın. Bu production kimlik sunucusu değildir.
 
 ```sh
-mkdir -p keys
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out issuer-rsa.pem
-openssl pkey -in issuer-rsa.pem -pubout -outform DER -out keys/RS256.der
-openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:prime256v1 -out issuer-ec.pem
-openssl pkey -in issuer-ec.pem -pubout -outform DER -out keys/ES256.der
-openssl genpkey -algorithm ED25519 -out issuer-ed.pem
-openssl pkey -in issuer-ed.pem -pubout -outform DER -out keys/EdDSA.der
+JWT_TOOL=../rust-java-rest/examples/tools/AsymmetricJwtDemo.java
+JWT_WORK=$(mktemp -d)
+java "$JWT_TOOL" keys "$JWT_WORK/issuer"
+java "-Dsample.jwt.public-key-directory=$JWT_WORK/issuer/public" \
+  -Dsample.jwt.cache.enabled=true \
+  -cp 'target-jwt-security/rest-sample-cache-reader-0.8.0.jar:target-jwt-security/lib/*' \
+  com.reactor.sample.jwt.JwtApplication >"$JWT_WORK/server.log" 2>&1 &
+JWT_PID=$!
+trap 'kill "$JWT_PID" 2>/dev/null || true' EXIT
+curl --fail --retry 20 --retry-connrefused --retry-delay 1 --retry-max-time 45 \
+  --max-time 2 http://localhost:8080/api/v1/jwt/health
+
+for ALG in RS256 ES256 EdDSA; do
+  ACCESS_TOKEN=$(java "$JWT_TOOL" token "$JWT_WORK/issuer" "$ALG" reader)
+  curl --fail --max-time 5 -H "Authorization: Bearer $ACCESS_TOKEN" \
+    http://localhost:8080/api/v1/jwt/me
+done
+READER_TOKEN=$(java "$JWT_TOOL" token "$JWT_WORK/issuer" RS256 reader)
+ADMIN_TOKEN=$(java "$JWT_TOOL" token "$JWT_WORK/issuer" ES256 admin)
+curl --fail --max-time 5 -H "Authorization: Bearer $ADMIN_TOKEN" \
+  http://localhost:8080/api/v1/jwt/admin
+test "$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $READER_TOKEN" http://localhost:8080/api/v1/jwt/admin)" = 403
+for CASE in expired wrong-issuer wrong-audience wrong-kid; do
+  BAD_TOKEN=$(java "$JWT_TOOL" token "$JWT_WORK/issuer" RS256 "$CASE")
+  test "$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bearer $BAD_TOKEN" http://localhost:8080/api/v1/jwt/me)" = 401
+done
+test "$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+  http://localhost:8080/api/v1/jwt/me)" = 401
+unset ACCESS_TOKEN READER_TOKEN ADMIN_TOKEN BAD_TOKEN
+kill "$JWT_PID"
+wait "$JWT_PID" || true
+trap - EXIT
 ```
 
-Özel anahtarlar kimlik sunucusunda kalır. REST image'ına koymayın. Bu komutlar
-token üretmez. Kimlik sunucusu eşleşen `alg`/`kid` ile JWT imzalamalıdır.
-Örnek için issuer `sample-issuer`, audience `sample-api`, subject `sample-user`,
-rol `reader` ve gelecekte bir `exp` gerekir.
+Yukarıdaki classpath ayıracı Linux içindir; Windows'ta `;` kullanın. Yardımcı stdout'a
+yalnız token yazar. `alg` ve `kid`, `RS256`, `ES256` veya `EdDSA` olarak birebir
+eşleşir. Claim'ler: `iss=sample-issuer`, `aud=sample-api`, `sub=sample-user`,
+`roles=["reader"]` (admin senaryosu `admin` ekler), `iat=şimdi`, `exp=şimdi+300`
+saniye. ES256, DER yerine JWS'nin 64-byte P1363 `r||s` biçimini kullanır.
+Token loglamayın, shell tracing açmayın. Sunucuyu durdurduktan sonra özel
+anahtarları içeren geçici `$JWT_WORK` dizinini kaldırın. REST image'ına yalnız
+`issuer/public` bağlanır/kopyalanır; `issuer` dizininin tamamı bağlanmaz.
+
+### Hatalar Ve Yardımcı Kontrolleri
+
+| Belirti | Yapılacak işlem |
+| --- | --- |
+| Başlangıçta anahtar okunamıyor | Mutlak açık-anahtar dizini kullanın; üç X.509 DER dosyası da 1..4096 byte olmalı. PEM ve PKCS8 açık-anahtar girdisi değildir. |
+| Algoritma bulunamıyor | Tam JDK 21 kullanın; jlink'e `jdk.crypto.ec` ekleyin. HS256'ya düşmeyin. |
+| Bağlantı reddi / readiness hatası | `$JWT_WORK/server.log`, 8080 portu ve Java/native sürüm eşleşmesini kontrol edin; aynı porta ikinci sunucu açmayın. |
+| Geçerli test token'ı 401 alıyor | Başlangıçtan sonra yeniden üretin (ömür beş dakika); saati, açık anahtarları, `alg`/`kid`, issuer/audience eşleşmesini kontrol edin. |
+| Reader `/admin` üzerinde 403 alıyor | Beklenen yetki sonucudur; 200 için admin senaryosunu kullanın. |
+| 503 | Sınırlı crypto/admission kapasitesi dolmuştur; hatalı-token 401 değildir. |
+
+Bağımsız imza/claim/hatalı-girdi kontrollerini tam JDK 21 ile çalıştırın:
 
 ```sh
-mvn -Pjwt-security exec:java \
-  -Dsample.jwt.public-key-directory=/absolute/path/keys \
-  -Dsample.jwt.cache.enabled=true
+mkdir -p target-jwt-security/helper-checks
+javac -d target-jwt-security/helper-checks \
+  ../rust-java-rest/examples/tools/AsymmetricJwtDemo.java \
+  ../rust-java-rest/examples/tools/AsymmetricJwtDemoChecks.java
+java -cp target-jwt-security/helper-checks AsymmetricJwtDemoChecks
 ```
 
-```sh
-curl http://localhost:8080/api/v1/jwt/health
-curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8080/api/v1/jwt/me
-```
-
-`/health` herkese açıktır. `/me`, `reader` rolünü ister ve Java kimlik bağlamını
-kontrol eder. `/admin`, `admin` rolünü ister. Yalnız reader rolü olan token burada
-`403` alır. Eksik, geçersiz veya süresi dolmuş token `401` alır.
+Bu kontroller servis HTTP/güvenlik veya eşlenmiş container kabulünün yerine geçmez.
 
 ## Önbelleği Ayarlayın
 

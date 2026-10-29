@@ -1,6 +1,7 @@
 # rest-sample-cache-reader Kullanıcı Rehberi
 
-Bu rehber ilk kullanım içindir.
+Bu rehber sample `0.8.0` / cache `0.9.0` ile ilk kullanım içindir.
+İsteğe bağlı özellikler ve hata sözleşmeleri için [güncel kullanım tablosuna](functional-operations.tr.md) bakın.
 
 Amaç kısa ve nettir: Redis içinde hazır duran JSON verisini REST API olarak döndürmek.
 
@@ -24,7 +25,8 @@ Amaç kısa ve nettir: Redis içinde hazır duran JSON verisini REST API olarak 
 
 Uygulama DB'ye gitmez. Scheduler çalıştırmaz. Dubbo kullanmaz.
 
-Sadece Redis'ten okur ve HTTP JSON response döner.
+Varsayılan uygulama sadece Redis'ten okur ve HTTP JSON response döner. L1 ve ayrı
+Maven profil örnekleri kendiliğinden açılmaz.
 
 ## Akış Nasıl Çalışır?
 
@@ -59,7 +61,7 @@ Redis I/O Rust tarafındadır. Bu yüzden Java Redis client ve ekstra Netty yüz
 | CRM müşteri kartı | Kullanıcı müşteri detay ekranı açar. API Redis'teki hazır customer JSON'u döner. | `GET /api/v1/cache/customers/{id}` |
 | Kampanya ekranı | Kampanya motoru aktif müşteri adaylarını hızlı ister. DB'ye gidilmez. | `GET /api/v1/cache/customers/campaigns/retention/candidates` |
 | Segment dashboard | Operasyon ekibi segment bazlı müşteri listesini görür. | `GET /api/v1/cache/customers/segments/standard` |
-| Cache hazır değil | Writer henüz snapshot yazmadıysa reader `404` döner. | Caller kısa süre sonra tekrar dener. |
+| Cache hazır değil | Varsayılan sözleşme `404`, `sample.errors.common-contract=true` ise `503` döner. | Writer yayınını kontrol edin; caller yalnız sınırlı okuma retry politikası uygulasın. |
 | Redis HA | Production ortamında Sentinel veya Cluster kullanılır. | `reactor.cache.redis.topology` değeri değiştirilir. |
 
 Bu projede en önemli karar şudur: API hızlı olsun diye veriyi önceden Redis'e yazıyoruz.
@@ -81,8 +83,8 @@ mvn -q package
 mvn -q exec:java
 ```
 
-Üretilen ince JAR yalnızca uygulama sınıflarını içerir. Doğrudan `java -jar` yerine Maven komutunu
-veya bu rehberdeki jlink image akışını kullanın.
+Üretilen ince JAR yalnızca uygulama sınıflarını içerir. Doğrudan `java -jar` yerine
+yukarıdaki Maven komutunu kullanın.
 
 Health kontrolü:
 
@@ -90,7 +92,9 @@ Health kontrolü:
 curl http://127.0.0.1:8080/app/health
 ```
 
-Cache hazır değilse customer endpoint'leri `404` dönebilir. Bu normaldir. Önce writer uygulaması Redis'e snapshot yazmalıdır.
+Cache hazır değilse varsayılan customer endpoint'leri `404` dönebilir; bu eski
+sözleşmenin bilinçli davranışıdır. Ortak hata sözleşmesi açılırsa `503` döner.
+Önce writer Redis'e snapshot yazmalıdır; [hata tablosu](functional-operations.tr.md#http-hata-tablosu) iki modu ayırır.
 
 ## Kopyala-Yapıştır Örnekler
 
@@ -167,14 +171,19 @@ curl http://127.0.0.1:8080/api/v1/cache/customers/1
 | `reactor.cache.redis.max-read-inflight=64` | Aynı anda kaç Redis read uçuşta olabilir. | p99 ve RSS birlikte ölçülerek artırılır. |
 | `reactor.cache.redis.max-response-bytes=1048576` | Tek Redis response üst limitidir. | Büyük JSON okuyorsanız artırın. |
 
+Son iki değer `config/production.properties` reçetesindendir; temel dosyaya yeni
+varsayılan eklemez. ID/segment handler'ları `CacheReadValue` kullanır. L1 kapalıyken
+raw byte dizisi döner, snapshot sarmalayıcısı oluşmaz. L1'in replica başına bellek
+sınırları ve alternatif açık snapshot sahipliği için [L1 bölümüne](../README.tr.md#isteğe-bağlı-l1-okuma) bakın.
+
 ## Tuning Karar Tablosu
 
 | Durum | İlk bakılacak ayar | Ne yapmalı? | Beklenen etki |
 |-------|--------------------|-------------|---------------|
 | RSS yüksek | `reactor.cache.redis.max-read-inflight` | Değeri düşürün. | Aynı anda daha az Redis response taşınır. |
 | p99 yüksek | Redis latency ve `max-read-inflight` | Redis'i ölçün, in-flight değerini düşürün. | Kuyruk baskısı azalır. |
-| Çok `404 cache_not_ready` var | Writer durumu | Writer projection publish loglarını kontrol edin. | Snapshot hazır olunca 200 döner. |
-| Büyük JSON dönüyor | `reactor.cache.redis.max-response-bytes` | Sadece gerekli endpoint için artırın. | Büyük response çalışır, RSS artabilir. |
+| Çok `404 customer_cache_not_ready` veya ortak modda `503` var | Writer durumu | Writer projection publish loglarını kontrol edin. | Hazır olmayan snapshot ile eksik kayıt ayrılır. |
+| Büyük JSON dönüyor | `reactor.cache.redis.max-response-bytes` | İstemci genelindeki bu sınırı ve route bütçesini birlikte ölçün. | Büyük response çalışabilir, RSS artabilir. |
 | Sentinel kullanılıyor | `reactor.cache.redis.topology=sentinel` | Node listesi ve master adını verin. | Failover takip edilir. |
 | Cluster kullanılıyor | `reactor.cache.redis.topology=cluster` | Cluster node listesini verin. | Key alanı cluster'a yayılır. |
 
@@ -191,7 +200,8 @@ curl http://127.0.0.1:8080/api/v1/cache/customers/1
 
 | Belirti | Muhtemel neden | Çözüm |
 |---------|----------------|-------|
-| `404 customer_cache_not_ready` | Writer henüz snapshot yazmadı. | Writer'ı çalıştırın ve `meta` endpoint'ini kontrol edin. |
+| Varsayılan modda `404 customer_cache_not_ready` | Writer henüz snapshot yazmadı. | Writer'ı çalıştırın ve `meta` endpoint'ini kontrol edin. |
+| Ortak hata modunda `503` | Snapshot hazır değil, yaş sınırı aşıldı veya Redis hatası var. | [Hata tablosuyla](functional-operations.tr.md#http-hata-tablosu) hata nedenini ayırın; TTL/tazelik/bağlantıyı kontrol edin. |
 | p99 yükseliyor | Redis yavaş veya in-flight fazla. | `max-read-inflight` değerini düşürün, Redis latency ölçün. |
 | RSS büyüyor | Büyük JSON veya çok fazla concurrent response var. | Response boyutunu ve route concurrency değerlerini düşürün. |
 | Cluster/Sentinel bağlanmıyor | Yanlış topology veya node listesi. | `reactor.cache.redis.topology` ve `reactor.cache.redis.nodes` değerlerini birlikte kontrol edin. |

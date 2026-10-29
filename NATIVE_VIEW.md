@@ -2,8 +2,11 @@
 
 [English](NATIVE_VIEW.md) | [Turkish](NATIVE_VIEW.tr.md)
 
-This is a **source-checkout example**. It is not in the published `4.8.0` package.
-The default Redis reader stays unchanged.
+This isolated source profile uses the published REST/codegen `4.8.0` APIs.
+The sample itself is not bundled into the framework JAR. The default Redis reader
+stays unchanged. See [feature selection/read costs](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.md).
+This profile describes the current checkout, not the contents of a previously
+published sample 0.8.0 JAR; build the source profile below.
 
 ## Contents
 
@@ -32,12 +35,13 @@ JARs do not gain account routes. The shared plain record does not auto-register 
 
 ## Run It
 
-Use Java 21. From this sample directory, build matching source artifacts:
+Use Java 21, Maven 3.9+, a free port 8080 and authenticated
+GitHub Packages access to REST/platform 4.8.0 and model 0.5.0. From this sample
+directory build the selected profile. Install matching framework/model sources
+first only if you changed them; published artifacts need no source install.
 
 ```shell
-mvn -B -ntp -f ../rust-java-rest/pom.xml install -DskipTests
-mvn -B -ntp -f ../rust-sample-model/pom.xml install -DskipTests
-mvn -B -ntp -Pnative-view package -DskipTests
+mvn -B -ntp -Pnative-view clean package -DskipTests
 mvn -B -ntp -Pnative-view dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target-native-view/lib
 ```
 

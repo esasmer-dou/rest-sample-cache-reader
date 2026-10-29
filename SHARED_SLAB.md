@@ -6,6 +6,8 @@ Use this isolated source example when an existing Redis key already contains the
 JSON you want to return. Java selects the key and response. Rust reads Redis and
 holds the payload until the managed HTTP writer finishes. No payload `byte[]`
 is created in Java on the FFM path. This is not the default versioned reader.
+Build this checkout's profile; its unchanged 0.8.0 POM version is not evidence
+that these additions were shipped in an earlier sample release.
 
 Slab means fixed-size native storage. A lease is temporary ownership of one slot.
 Closing the snapshot returns that slot for reuse. JNI is the existing Java/Rust
@@ -13,12 +15,24 @@ bridge; FFM is Java's optional foreign-function API. OpenJ9 uses the JNI slab pa
 
 ## Run The Example
 
-The changes are not published yet. First build the matching local source modules:
-`rust-java-ffm-fast`, `rust-java-ffm-cache`, and the coordinated Linux library.
+Run from this sample directory, with JDK 21, Maven 3.9+,
+curl, redis-cli, a disposable Redis at 127.0.0.1:6379 and port 8080 free.
+Resolve the published 4.8.0 `rust-java-ffm-fast`/`rust-java-ffm-cache` modules
+with authenticated Maven access. Their publication does not imply that an
+arbitrary packaged native library has slab/FFM capabilities. Use a matching
+qualified native file; if its required capability is absent, build that feature
+from the matching source revision. See [selection/read costs](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.md).
 OpenJ9 JNI slab uses Cargo `--release --features shared-slab`, retaining the normal
 panic-abort engine. Only HotSpot FFM needs `--profile release-ffm --features ffm-fast`.
 Abort-profile FFM capabilities are zero; it must never activate the foreign API.
 No existing native ABI number changes.
+
+For an explicit native source build, from the sibling `rust-spring`
+directory run `cargo build --release --features shared-slab` (OpenJ9 JNI), or
+`cargo build --profile release-ffm --features ffm-fast` (HotSpot FFM). Use the
+resulting `target/release/librust_hyper.so` or `target/release-ffm/librust_hyper.so`
+respectively in `rust.lib.path`; `/app/native/librust_hyper.so` below is the
+deployment location of that selected file, not a path created by Maven.
 
 ```sh
 mvn -B -ntp -Pshared-slab clean package dependency:copy-dependencies \
@@ -121,7 +135,7 @@ Slab memory has process lifetime. Closing the reader releases the client and
 detaches its input wrappers but does not return the slab to the OS. Snapshot and
 FFM segment objects still allocate. This is neither end-to-end zero allocation nor
 zero copy. Defaults for the normal sample and versioned snapshot consistency are
-unchanged. [Module details](../rust-java-rest/platform/ffm-cache/README.md).
+unchanged. [Module details](https://github.com/esasmer-dou/rust-java-rest/blob/master/platform/ffm-cache/README.md).
 
 ## Native Storage
 

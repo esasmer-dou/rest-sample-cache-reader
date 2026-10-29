@@ -9,7 +9,7 @@ The real projection read flow supports optional versioned L1 and owned JSON bodi
 [Usage guide](docs/functional-operations.md) · [Release notes](docs/RELEASE_NOTES_v0.8.0.md)
 
 
-New usage guide: [New usage examples](docs/functional-operations.md).
+Feature, run and error map: [Usage examples](docs/functional-operations.md).
 
 Optional example: [Read a Rust-owned binary buffer and produce JSON](NATIVE_VIEW.md).
 The separate `native-view` build does not change the default Redis reader.
@@ -48,7 +48,7 @@ key composition.
 | Run it locally | [Quick Start](#quick-start) |
 | Pick standalone, Sentinel, or Cluster | [Choose the Redis mode](#choose-the-redis-mode) |
 | Change only application settings | [Configuration](#configuration) |
-| Reuse frequently requested JSON in this process | [Optional L1 reads](#optional-l1-reads-source-checkout) |
+| Reuse frequently requested JSON in this process | [Optional L1 reads](#optional-l1-reads) |
 | Serve an explicitly public product catalog with Rust edge policies | [Public catalog source example](docs/public-edge.md) |
 | Enable Glowroot telemetry | [Glowroot Telemetry](#glowroot-telemetry) |
 | Diagnose a failure | [Common problems](#common-problems) |
@@ -210,20 +210,15 @@ java "-Dreactor.config.file=src/main/resources/config/production.properties;src/
 | `rust-spring.properties` | Small local defaults |
 | `config/production.properties` | Safe production limits and timeouts |
 | `config/advanced-tuning.properties` | Route limits, native trim, and namespace overrides |
-| `config/l1.properties` | Optional bounded detail/segment L1 storage in this source checkout |
+| `config/l1.properties` | Optional bounded detail/segment L1 storage; disabled in the base configuration |
 
 Reader and writer namespaces must match. If the writer publishes `crm.customer.campaign`, the reader must use the same campaign namespace.
 
-## Optional L1 Reads (Source Checkout)
+## Optional L1 Reads
 
-This source change adds an opt-in L1 reader. It is not in the published cache `0.9.0`
-package yet. Build the matching cache library and its codegen artifact locally first:
-
-```powershell
-mvn -B -ntp -f ../rust-java-rest/pom.xml install
-mvn -B -ntp -f ../java-rust-cache/pom.xml install
-mvn -B -ntp clean verify
-```
+Sample `0.8.0` uses the released cache `0.9.0` L1 reader with REST/platform `4.8.0`.
+Use the aligned published dependencies and their packaged native library; sibling
+library source builds are not a prerequisite. L1 remains opt-in.
 
 Use L1 when the same customer or segment is requested often. Redis remains the source
 of the versioned snapshot. A hit avoids fetching the JSON from Redis again. Java
@@ -243,9 +238,10 @@ public interface CustomerCacheService {
 }
 ```
 
-Return `CacheResponses.valueProblem(customerCache.customerValue(id))` from the handler.
+The actual ID and segment handlers use `CacheReadValue`: `CacheResponses.valueJson(...)`
+by default, or `CacheResponses.valueProblem(...)` when `sample.errors.common-contract=true`.
 With L1 disabled, this forwards the Redis byte array as a raw response. No snapshot
-wrapper is created. With L1 enabled, the same method returns an owned snapshot.
+wrapper is created. With L1 enabled, the value carries an owned snapshot.
 The response writer releases its pin after writing or cancellation. Do not close it
 after handing it to the response helper. Existing result/snapshot APIs still work.
 
@@ -274,7 +270,7 @@ mvn -q `
 | `sample.cache.customer.l1.max-entries=0` | Leaves projections disabled unless they have their own enabled setting. A JVM/global runtime override of 0 disables all of them. |
 | `sample.cache.customer.version-cache-ms=1000` | Checks the snapshot version at most once per second in sequential reads. Concurrent expired readers may each check it. |
 
-The two slabs total about 0.17 MiB. This is storage, not the application's total RSS.
+The two slabs total about 0.17 MiB per process/replica. This is storage, not the application's total RSS.
 Status, campaign and metadata remain Redis-only. Payloads above the entry limit bypass
 L1; they do not become errors.
 
@@ -286,25 +282,26 @@ exceeds 2 KiB, increase both `sample.cache.customer.detail.l1.max-entry-bytes` a
 `sample.cache.customer.segment.l1.max-bytes=655360`. This reserves more local memory.
 Keep the smaller recipe when larger replies are rare; they still return through Redis.
 
-The customer-by-ID and segment endpoints now use an owned snapshot. On an L1 hit,
-its bytes are copied directly from the slab to the native HTTP buffer, without a
-Java payload array. This is not zero-copy networking: the slab-to-response copy remains.
+On an L1 hit, the `CacheReadValue` response transfers an owned native handle through
+the REST response writer. Bytes are copied from the slab to the native HTTP buffer
+without a Java payload array. The Java handler is still called. This is not zero-copy networking.
 Rust owns the large native frame until sending ends. Returning it to the pool does not
 guarantee that its pages immediately return to the operating system.
-The generated reader pins this snapshot directly, without creating an intermediate lease.
 The original `CacheReadResult` getters still return independent byte arrays.
 
-With L1 disabled, Redis still returns a `byte[]`; the snapshot only owns that result.
-It adds no slab, but it does create small ownership objects.
+With L1 disabled, the current value route returns the Redis `byte[]` as a raw body,
+without a snapshot wrapper. Explicit `customerSnapshot(...)` / `segmentSnapshot(...)`
+calls are a separate ownership API and still create small ownership objects in Redis-only mode.
 L1 trades local memory for fewer Redis reads. It is not a guaranteed RSS reduction.
 Keep the normal Redis-only configuration when minimum memory matters most.
 
 | Your use case | Choose |
 | --- | --- |
-| Return the prepared JSON unchanged | `CacheReadSnapshot` and `CacheResponses.ownedJson(...)` |
+| Return prepared JSON through the current HTTP routes | `CacheReadValue` and `valueJson(...)` / `valueProblem(...)` |
+| Explicitly own a snapshot in custom code | `CacheReadSnapshot` and `CacheResponses.ownedJson(...)` |
 | Inspect or modify JSON bytes in Java | The existing `CacheReadResult` getters |
 
-For example, inside your own controller:
+Alternative explicit-ownership example inside your own controller (not the current handler implementation):
 
 ```java
 @GetMapping("/{id}")
@@ -440,7 +437,9 @@ guide for runtime profile switching and the complete property reference.
 | `CustomerCacheHandler.java` | Exposes REST endpoints |
 | `rust-spring.properties` | Local settings |
 
-The frequently used path returns `RawResponse` with the JSON bytes already stored in Redis. It does not rebuild a large Java object tree.
+ID and segment routes use `CacheReadValue`; other cache routes use `CacheReadResult`
+and raw JSON responses. Neither rebuilds a large Java object tree. See the L1 section
+for the Redis-only byte-array path versus owned native response handling.
 
 The application does not create `RustCache`, bound projections, or handlers by hand. `@EnableRustCache`
 owns native cache startup/shutdown. `@GenerateProjectionReader` binds projection and index names once
@@ -482,6 +481,7 @@ If Maven returns `401`, check the token, repository access, environment variable
 | `401 Unauthorized` during Maven build | GitHub token and `settings.xml` server IDs |
 | Readiness is `DOWN` | Run the writer and check the `meta` snapshot |
 | Endpoint returns cache miss | Reader and writer data-group namespaces |
+| Not-ready returns `404` or `503` | Default legacy contract uses `404`; opt-in common errors use `503`. See the [error map](docs/functional-operations.md#http-error-map) |
 | Redis timeout | Redis address, connection mode, and timeout values |
 | Native library cannot load in a container | Use a writable `reactor.cache.native.extract-dir` |
 | Glowroot data is missing | Check `enabled`, collector address, agent id, and `/diagnostics/glowroot` |
@@ -511,7 +511,8 @@ If Maven returns `401`, check the token, repository access, environment variable
 ## More Detail
 
 - [Turkish user guide](docs/USER_GUIDE.tr.md)
-- [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf)
+- [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf) (earlier snapshot; use Markdown for these corrections)
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
 - [v0.8.0 release notes](docs/RELEASE_NOTES_v0.8.0.md)
+- [Unreleased documentation corrections](docs/RELEASE_NOTES_UNRELEASED.md)
