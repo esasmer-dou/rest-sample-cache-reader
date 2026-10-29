@@ -2,7 +2,30 @@
 
 [English](README.md) | [Türkçe](README.tr.md)
 
+## 0.8.0 İle Başlayın
+
+Gerçek projection okuma akışı, isteğe bağlı sürümlü L1 ve sahipliği izlenen JSON yanıtlarını destekler. Ayrı profiller public edge, native view, JWT, izleme, ortak tampon ve dış HTTP çağrısını gösterir. Varsayılan uygulama yalnız Redis'ten okur.
+
+[Kullanım rehberi](docs/functional-operations.md) · [Sürüm notları](docs/RELEASE_NOTES_v0.8.0.md)
+
+
 Yeni kullanım rehberi: [Yeni kullanım örnekleri](docs/functional-operations.tr.md).
+
+Kaynak kod örneği: [Rust'a ait binary buffer'ı okuyup JSON üretme](NATIVE_VIEW.tr.md).
+Ayrı `native-view` derlemesi, varsayılan Redis okuyucusunu değiştirmez.
+
+Kaynak kod örneği: [Üretilmiş HTTP istemcisi, devre kesici ve native HS256](OUTBOUND.tr.md).
+Ayrı `outbound` derlemesi Redis'e bağlanmaz.
+
+Kaynak kod örneği: [Açık anahtarla JWT ve sınırlı token önbelleği](JWT_SECURITY.tr.md).
+`jwt-security` derlemesi yalnız REST/security kullanır. Varsayılan Redis reader değişmez.
+
+Kaynak kod örneği: [Bir isteği HTTP servisleri arasında izleyin](TRACE_PROPAGATION.tr.md).
+Ayrı `trace-propagation` derlemesi W3C parent ID ve retry başlık korumasını gösterir.
+
+Yalnız kaynak derlemesinde: [Ham Redis JSON verisini sınırlı shared slab ile döndürme](SHARED_SLAB.tr.md).
+Ayrı `shared-slab` derlemesinde handler Java'da kalır. OpenJ9 JNI slab kullanır; uygun HotSpot için FFM seçilebilir.
+Sürümlü projection okuması ve varsayılan okuyucu değişmez.
 
 Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uygulamadır.
 
@@ -12,7 +35,7 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.7.1`, `java-rust-cache:0.8.1`, `rust-sample-model:0.4.4`.
+Kullanılan sürümler: `rust-java-rest:4.8.0`, `java-rust-cache:0.9.0`, `rust-sample-model:0.5.0`.
 
 ## Önce Bu Bölümü Okuyun
 
@@ -25,6 +48,8 @@ için bu projeden başlamayın.
 | Lokal çalıştırmak | [Hızlı Başlangıç](#hızlı-başlangıç) |
 | Standalone, Sentinel veya Cluster seçmek | [Redis Modunu Seçin](#redis-modunu-seçin) |
 | Yalnız uygulama ayarını değiştirmek | [Konfigürasyon](#konfigürasyon) |
+| Sık okunan JSON'u bu uygulamada tekrar kullanmak | [İsteğe bağlı L1 okuma](#isteğe-bağlı-l1-okuma-kaynak-kod) |
+| Herkese açık ürün kataloğunu Rust edge ile sunmak | [Public katalog kaynak kod örneği](docs/public-edge.tr.md) |
 | Glowroot telemetrisini açmak | [Glowroot Agent ile Telemetri](#glowroot-agent-ile-telemetri) |
 | Hata çözmek | [Sık Karşılaşılan Sorunlar](#sık-karşılaşılan-sorunlar) |
 
@@ -34,13 +59,13 @@ yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
 
 ## Güncel Kaynak Ayarları
 
-Bu güncelleme, platformu REST `4.7.1` ve isteğe bağlı agent `0.7.0` ile eşler.
+Bu güncelleme, platformu REST `4.8.0` ve isteğe bağlı agent `0.7.1` ile eşler.
 Seçtiğiniz bağımlılığın native dosyasını kullanın. Eski SO/DLL dosyalarını karıştırmayın.
 İş kodu, URL'ler ve ayar anahtarları değişmez. Telemetri varsayılan olarak kapalıdır.
 HTTP micro bellek testi, veritabanı işinde veya daha ayrıntılı profilde aynı maliyeti garanti etmez.
 
-`0.7.1` sürümü platform parent `4.7.1` kullanır. Uygulamayı hizalanmış bağımlılıklarla
-yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.7.1.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
+`0.8.0` sürümü platform parent `4.8.0` kullanır. Uygulamayı hizalanmış bağımlılıklarla
+yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.8.0.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
 
 - `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
 - `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
@@ -48,7 +73,7 @@ yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.7.1.tr.md) okuyun.
 - Redis key'leri, projection namespace'leri, REST adresleri ve read-only davranış değişmedi.
 - REST, ABI `29/7/6/6` hattını kullanır. Cache paketi kendi Redis ABI `6` sözleşmesini doğrular.
 
-İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.7.1` çalışma katmanıyla kullanılabilir.
+İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.8.0` çalışma katmanıyla kullanılabilir.
 Varsayılan olarak kapalıdır. Yalnız bu servis mevcut Glowroot Central kurulumuna sınırlandırılmış HTTP
 ve native Redis süreleri gönderecekse açın. Handler veya projection kodu değişmez.
 
@@ -185,8 +210,145 @@ java "-Dreactor.config.file=src/main/resources/config/production.properties;src/
 | `rust-spring.properties` | Küçük lokal varsayılanlar |
 | `config/production.properties` | Güvenli production limitleri ve timeout'lar |
 | `config/advanced-tuning.properties` | Route limitleri, native trim ve namespace override'ları |
+| `config/l1.properties` | Bu kaynak sürümünde detail/segment için isteğe bağlı, sınırlı L1 alanı |
 
 Reader ve writer namespace değerleri aynı olmalıdır. Writer `crm.customer.campaign` namespace'ine yazıyorsa reader da aynı değeri okumalıdır.
+
+## İsteğe Bağlı L1 Okuma (Kaynak Kod)
+
+Bu kaynak değişikliği, isteğe bağlı L1 okuyucusunu ekler. Henüz yayımlanmış cache
+`0.9.0` paketinde bulunmaz. Önce uyumlu cache kütüphanesini ve kod üretecini yerelde derleyin:
+
+```powershell
+mvn -B -ntp -f ../rust-java-rest/pom.xml install
+mvn -B -ntp -f ../java-rust-cache/pom.xml install
+mvn -B -ntp clean verify
+```
+
+Aynı müşteri veya segment sık isteniyorsa L1 kullanabilirsiniz. Sürümlü verinin kaynağı
+yine Redis'tir. L1'de bulunan JSON için Redis'ten tekrar veri alınmaz. Java handler,
+doğrulama ve yanıt kodları değişmez. İstek Java'yı atlayıp Rust'tan doğrudan dönmez.
+
+Sample'ın okuma kontratı, derleme sırasında L1 seçimine izin verir:
+
+```java
+@GenerateProjectionReader(
+    rootPrefix = "sample.cache.customer",
+    generatedName = "CustomerCacheReader",
+    restBean = true,
+    allowL1 = true)
+public interface CustomerCacheService {
+    @ProjectionIdRead(projection = "detail")
+    CacheReadValue customerValue(long id);
+}
+```
+
+Handler'da `CacheResponses.valueProblem(customerCache.customerValue(id))` döndürün.
+L1 kapalıysa Redis'ten gelen byte dizisi doğrudan raw yanıta aktarılır. Snapshot
+sarmalayıcısı oluşturulmaz. L1 açıksa aynı metot sahipliği kontrollü snapshot döndürür.
+Yanıt yazıcısı, yazma veya iptal sonrasında pin'i bırakır. Yardımcı metoda devrettikten
+sonra handler'da kapatmayın. Mevcut result ve snapshot API'leri de korunur.
+
+Normal başlangıçta yalnız Redis okuyucusu kullanılır. Detail ve segment için L1'i açın:
+
+```powershell
+mvn -q `
+  "-Dreactor.config.file=src/main/resources/config/l1.properties" `
+  "-Dreactor.cache.redis.host=127.0.0.1" `
+  "-Dreactor.cache.redis.port=16379" `
+  compile exec:java
+```
+
+| Dosyadaki ayar | Ne işe yarar? |
+| --- | --- |
+| `sample.cache.customer.detail.l1.max-entries=16` | Sabit alanda en fazla 16 müşteri detayı tutar. |
+| `sample.cache.customer.detail.l1.max-entry-bytes=2048` | En fazla 2 KiB olan detay verisini L1'de tutar. |
+| `sample.cache.customer.segment.l1.max-entries=4` | En fazla dört segment verisi tutar. |
+| `sample.cache.customer.segment.l1.max-entry-bytes=32768` | En fazla 32 KiB olan segment verisini L1'de tutar. |
+| `sample.cache.customer.detail.l1.max-bytes=65536` | Detay alanını ve tahmini yönetim belleğini sınırlar. |
+| `sample.cache.customer.segment.l1.max-bytes=163840` | Segment alanını ve tahmini yönetim belleğini sınırlar. |
+| `sample.cache.customer.detail.l1.max-age-ms=1000` | Bir saniyesini dolduran detay verisini yeniden alır. Segment için de 1000 ms kullanılır. |
+| `sample.cache.customer.segment.l1.max-age-ms=1000` | Bir saniyesini dolduran segment verisini yeniden alır. |
+| `sample.cache.customer.detail.l1.max-key-chars=256` | Saklanan detay/index anahtarını 256 UTF-16 birimiyle sınırlar. |
+| `sample.cache.customer.segment.l1.max-key-chars=256` | Segment anahtarına aynı sınırı uygular. |
+| `sample.cache.customer.l1.max-entries=0` | Kendi etkin ayarı olmayan projection'ları kapalı bırakır. JVM veya genel ortam ayarıyla 0 verilirse hepsini kapatır. |
+| `sample.cache.customer.version-cache-ms=1000` | Sıralı okumada snapshot sürümünü en fazla saniyede bir kontrol eder. Süresi dolan eşzamanlı okumalar ayrı kontrol yapabilir. |
+
+İki sabit veri alanının toplamı yaklaşık 0,17 MiB'dir. Bu değer uygulamanın toplam RSS'i
+değildir. Status, campaign ve meta doğrudan Redis'ten okunur. Boyut sınırını aşan veri
+L1'e alınmaz; normal okuma devam eder.
+
+Bu sınırlar HTTP yanıtını küçültmez; yalnız L1 alanını belirler. Müşteri JSON'unuz
+sık sık 2 KiB sınırını aşıyorsa `sample.cache.customer.detail.l1.max-entry-bytes` ve
+`sample.cache.customer.detail.l1.max-bytes` değerlerini birlikte artırın.
+Örneğin `8192` ve `196608`, her biri en fazla 8 KiB olan 16 kayıt için yeterlidir.
+Daha büyük segment listelerinde `sample.cache.customer.segment.l1.max-entry-bytes=131072`
+ve `sample.cache.customer.segment.l1.max-bytes=655360` kullanabilirsiniz. Bu seçim
+daha fazla sabit bellek ayırır. Büyük yanıtlar nadirse küçük reçeteyi koruyun;
+bu yanıtlar yine Redis üzerinden döner.
+
+ID ile müşteri ve segment endpoint'leri artık sahipliği izlenen snapshot kullanır.
+L1 hit'inde veri, Java payload dizisi oluşturulmadan sabit alandan native HTTP buffer'a
+yazılır. Bu, ağda sıfır kopya anlamına gelmez. Sabit alandan yanıt buffer'ına kopya kalır.
+Büyük native frame, gönderim bitene kadar Rust tarafında tutulur. Havuza dönmesi,
+bu alanın hemen işletim sistemine bırakılacağı anlamına gelmez.
+Üretilen okuyucu snapshot'ı doğrudan pinler; arada geçici lease nesnesi oluşturmaz.
+Mevcut `CacheReadResult` metotları bağımsız byte dizisi döndürmeye devam eder.
+
+L1 kapalıyken Redis yine `byte[]` döndürür. Snapshot yalnız bu sonucun sahipliğini
+alır. Sabit bellek alanı açılmaz; ancak küçük sahiplik nesneleri oluşur.
+L1, daha az Redis çağrısı için ek yerel bellek kullanır. RSS'in mutlaka düşmesini
+sağlamaz. En düşük bellek önceliğinde normal Redis-only ayarını koruyun.
+
+| İhtiyacınız | Seçim |
+| --- | --- |
+| Hazır JSON'u değiştirmeden sunmak | `CacheReadSnapshot` ve `CacheResponses.ownedJson(...)` |
+| Java'da JSON byte'larını incelemek veya değiştirmek | Mevcut `CacheReadResult` metotları |
+
+Kendi controller'ınızda kullanım örneği:
+
+```java
+@GetMapping("/{id}")
+public ResponseEntity<?> customer(@PathVariable("id") long id) {
+    return CacheResponses.ownedJson(
+        customerCache.customerSnapshot(id),
+        "customer_not_cached", "customer_cache_not_ready");
+}
+```
+
+Yardımcı metot, snapshot'ın sahipliğini alır. Yazım bittiğinde, hata oluştuğunda veya
+bekleyen native buffer tekrarı iptal edildiğinde kaynak bırakılır. Buffer küçükse aynı
+snapshot korunur; Java handler yeniden çağrılmaz. Aynı snapshot'ı başka HTTP isteğinde
+kullanmayın. Snapshot'ı alıp yanıt olarak döndürmekten vazgeçerseniz kendiniz kapatın.
+`ownedJson(...)` ile döndürdüğünüz snapshot'ı controller içinde try-with-resources
+ile kapatmayın. Bu, framework yanıtı yazmadan kaynağı kapatır.
+Adres, UTF-8 içerik ve hata sözleşmesi değişmez. Uyumlu REST çalışma katmanı gerekir.
+Buffer tekrarını desteklemeyen eski native çalışma katmanında büyük owned yanıt açık
+hata verir; iş mantığı sessizce yeniden çalıştırılmaz.
+
+L1 yaşı, Redis TTL'i değildir. Writer yeni snapshot yayımladığında değişiklik, seçilen
+sürüm kontrol aralığından sonra görülür. Her okumada sürüm kontrolü gerekiyorsa
+`version-cache-ms=0` kullanın. Bu ayarda veri L1'den gelebilir; ancak her çağrıda Redis'ten
+sürüm okunur. Kaynak hatasında kendiliğinden eski veri döndürülmez. Seçtiğiniz sürüm
+kontrol süresini tolere edemeyen veriler için bu ayarı kullanmayın.
+L1 yaşını snapshot TTL'inden kısa tutun. L1, her hit'te Redis anahtarının süresini
+kontrol etmez. Silinme veya süre dolması her okumaya hemen yansımalıysa ilgili
+projection'ı yalnız Redis'ten okuyun.
+
+Dosyayı değiştirmeden L1'i kapatmak için `-Dsample.cache.customer.l1.max-entries=0`
+ekleyin. Ortam değişkeni karşılığı `SAMPLE_CACHE_CUSTOMER_L1_MAX_ENTRIES=0` olur.
+L1'in kullanıldığını kontrol edin:
+
+```powershell
+curl.exe http://127.0.0.1:8080/api/v1/cache/customers/cache-metrics
+```
+
+Yeni `l1` alanında etkin projection sayısı (`enabled_projections`), bulunan okumalar
+(`hits`), bulunamayan okumalar (`misses`), sabit alanın boyutu (`slab_bytes`) ve açık
+ödünç okuma sayısı (`active_borrows`) görünür. İstekler tamamlandığında `active_borrows`
+normalde 0 olmalıdır.
+Üretilen okuyucu kapanırken L1 alanının sahipliği bırakılır. Redis istemcisi ayrıca kapatılır.
+Sürüm, ödünç okuma ve bellek sınırları için [L1 sözleşmesine](https://github.com/esasmer-dou/java-rust-cache/blob/master/docs/versioned-l1.tr.md) bakın.
 
 ## Glowroot Agent ile Telemetri
 
@@ -194,15 +356,15 @@ Bu uygulama Rust-Java REST üzerinde çalışır. Ayrı bir Spring starter veya 
 gerekmez. Telemetri varsayılan olarak kapalıdır. Açıldığında HTTP route ve native Redis read süreleri
 aynı Rust çalışma katmanında toplanır. Handler ve projection kodu değişmez.
 
-Bu sample, Glowroot ABI `6` taşıyan production platform `4.7.1` sürümünü kullanır. İsteğe bağlı
-`java-rust-glowroot-agent:0.7.0` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
+Bu sample, Glowroot ABI `6` taşıyan production platform `4.8.0` sürümünü kullanır. İsteğe bağlı
+`java-rust-glowroot-agent:0.7.1` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
 gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 
 ```xml
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.7.1</version>
+  <version>4.8.0</version>
   <relativePath/>
 </parent>
 ```
@@ -355,4 +517,4 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - [Türkçe PDF rehberi](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
-- [v0.7.1 sürüm notları](docs/RELEASE_NOTES_v0.7.1.tr.md)
+- [v0.8.0 sürüm notları](docs/RELEASE_NOTES_v0.8.0.tr.md)

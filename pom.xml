@@ -7,13 +7,13 @@
     <parent>
         <groupId>com.reactor</groupId>
         <artifactId>rust-java-platform-parent</artifactId>
-        <version>4.7.1</version>
+        <version>4.8.0</version>
         <relativePath/>
     </parent>
 
     <groupId>com.reactor.sample</groupId>
     <artifactId>rest-sample-cache-reader</artifactId>
-    <version>0.7.1</version>
+    <version>0.8.0</version>
     <packaging>jar</packaging>
 
     <name>rest-sample-cache-reader</name>
@@ -21,16 +21,22 @@
 
     <properties>
         <junit.version>5.11.4</junit.version>
+        <sample.source-directory>src/main/java</sample.source-directory>
+        <sample.test-source-directory>src/test/java</sample.test-source-directory>
+        <sample.build-directory>target</sample.build-directory>
+        <sample.starter.artifact>rust-java-starter-cache-reader</sample.starter.artifact>
+        <sample.model.scope>compile</sample.model.scope>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.reactor</groupId>
-            <artifactId>rust-java-starter-cache-reader</artifactId>
+            <artifactId>${sample.starter.artifact}</artifactId>
         </dependency>
         <dependency>
             <groupId>com.reactor.sample</groupId>
             <artifactId>rust-sample-model</artifactId>
+            <scope>${sample.model.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -55,7 +61,136 @@
         </repository>
     </repositories>
 
+    <profiles>
+        <profile>
+            <id>shared-slab</id>
+            <properties>
+                <sample.model.scope>provided</sample.model.scope>
+                <sample.starter.artifact>rust-java-starter-rest</sample.starter.artifact>
+                <sample.source-directory>src/shared-slab/java</sample.source-directory>
+                <sample.test-source-directory>src/shared-slab-test/java</sample.test-source-directory>
+                <sample.build-directory>target-shared-slab</sample.build-directory>
+            </properties>
+            <dependencies>
+                <dependency><groupId>com.reactor</groupId><artifactId>rust-java-ffm-cache</artifactId><version>${rust-java-rest.version}</version></dependency>
+            </dependencies>
+            <build>
+                <resources><resource><directory>src/shared-slab/resources</directory></resource></resources>
+                <plugins><plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                    <configuration><mainClass>com.reactor.sample.slab.SlabApplication</mainClass></configuration>
+                </plugin></plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>trace-propagation</id>
+            <properties>
+                <sample.model.scope>provided</sample.model.scope>
+                <sample.starter.artifact>rust-java-starter-rest</sample.starter.artifact>
+                <sample.source-directory>src/trace-propagation/java</sample.source-directory>
+                <sample.test-source-directory>src/trace-propagation-test/java</sample.test-source-directory>
+                <sample.build-directory>target-trace-propagation</sample.build-directory>
+            </properties>
+            <dependencies>
+                <dependency><groupId>com.reactor</groupId><artifactId>rust-java-starter-tracing</artifactId></dependency>
+                <dependency><groupId>com.reactor</groupId><artifactId>rust-java-starter-http-client</artifactId></dependency>
+            </dependencies>
+            <build>
+                <resources><resource><directory>src/trace-propagation/resources</directory></resource></resources>
+                <plugins><plugin>
+                    <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                    <configuration><mainClass>com.reactor.sample.trace.TraceApplication</mainClass></configuration>
+                </plugin></plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>jwt-security</id>
+            <properties>
+                <sample.model.scope>provided</sample.model.scope>
+                <sample.starter.artifact>rust-java-starter-rest</sample.starter.artifact>
+                <sample.source-directory>src/jwt-security/java</sample.source-directory>
+                <sample.test-source-directory>src/jwt-security-test/java</sample.test-source-directory>
+                <sample.build-directory>target-jwt-security</sample.build-directory>
+            </properties>
+            <dependencies>
+                <dependency><groupId>com.reactor</groupId><artifactId>rust-java-starter-security</artifactId></dependency>
+            </dependencies>
+            <build>
+                <resources><resource><directory>src/jwt-security/resources</directory></resource></resources>
+                <plugins><plugin>
+                    <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                    <configuration><mainClass>com.reactor.sample.jwt.JwtApplication</mainClass></configuration>
+                </plugin></plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>outbound</id>
+            <properties>
+                <sample.starter.artifact>rust-java-starter-rest</sample.starter.artifact>
+                <sample.source-directory>src/outbound/java</sample.source-directory>
+                <sample.test-source-directory>src/outbound-test/java</sample.test-source-directory>
+                <sample.build-directory>target-outbound</sample.build-directory>
+                <exec.mainClass>com.reactor.sample.outbound.OutboundApplication</exec.mainClass>
+            </properties>
+            <dependencies>
+                <dependency><groupId>com.reactor</groupId><artifactId>rust-java-starter-http-client</artifactId></dependency>
+                <dependency><groupId>com.reactor</groupId><artifactId>rust-java-starter-security</artifactId></dependency>
+            </dependencies>
+            <build>
+                <resources><resource><directory>src/outbound/resources</directory></resource></resources>
+                <testResources><testResource><directory>src/outbound-test/resources</directory></testResource></testResources>
+                <plugins><plugin>
+                    <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                    <configuration><mainClass>${exec.mainClass}</mainClass></configuration>
+                </plugin></plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>native-view</id>
+            <properties>
+                <sample.starter.artifact>rust-java-starter-rest</sample.starter.artifact>
+                <sample.source-directory>src/native-view/java</sample.source-directory>
+                <sample.test-source-directory>src/native-view-test/java</sample.test-source-directory>
+                <sample.build-directory>target-native-view</sample.build-directory>
+            </properties>
+            <build>
+                <resources><resource><directory>src/native-view/resources</directory></resource></resources>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <configuration><mainClass>com.reactor.sample.nativeview.NativeViewApplication</mainClass></configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>public-edge</id>
+            <properties>
+                <sample.source-directory>src/public-edge/java</sample.source-directory>
+                <sample.test-source-directory>src/public-edge-test/java</sample.test-source-directory>
+                <sample.build-directory>target-public-edge</sample.build-directory>
+            </properties>
+            <build>
+                <resources>
+                    <resource><directory>src/public-edge/resources</directory></resource>
+                </resources>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <configuration>
+                            <mainClass>com.reactor.sample.cache.publiccatalog.PublicCatalogApplication</mainClass>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
+        <directory>${sample.build-directory}</directory>
+        <sourceDirectory>${sample.source-directory}</sourceDirectory>
+        <testSourceDirectory>${sample.test-source-directory}</testSourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>

@@ -2,7 +2,30 @@
 
 [English](README.md) | [Türkçe](README.tr.md)
 
+## Start With 0.8.0
+
+The real projection read flow supports optional versioned L1 and owned JSON bodies. Separate profiles demonstrate public edge policies, native views, JWT, tracing, shared slabs and outbound HTTP. The default remains a Redis-only read service.
+
+[Usage guide](docs/functional-operations.md) · [Release notes](docs/RELEASE_NOTES_v0.8.0.md)
+
+
 New usage guide: [New usage examples](docs/functional-operations.md).
+
+Optional example: [Read a Rust-owned binary buffer and produce JSON](NATIVE_VIEW.md).
+The separate `native-view` build does not change the default Redis reader.
+
+Optional example: [Generated outbound HTTP, circuit breakers and native HS256](OUTBOUND.md).
+The separate `outbound` build does not connect to Redis.
+
+Optional example: [Public-key JWT and bounded token caching](JWT_SECURITY.md).
+The separate `jwt-security` build uses REST/security only; the default Redis reader is unchanged.
+
+Optional example: [Trace a request across HTTP services](TRACE_PROPAGATION.md).
+The separate `trace-propagation` build demonstrates W3C parent IDs and retry header preservation.
+
+Optional example: [Return raw Redis JSON through bounded shared native storage](SHARED_SLAB.md).
+The separate `shared-slab` build keeps Java handlers. OpenJ9 uses JNI slab; qualified HotSpot can select FFM.
+It does not replace versioned projection reads or change the default reader.
 
 A small REST application that reads ready JSON snapshots from Redis.
 
@@ -12,7 +35,7 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.7.1`, `java-rust-cache:0.8.1`, `rust-sample-model:0.4.4`.
+Current versions: `rust-java-rest:4.8.0`, `java-rust-cache:0.9.0`, `rust-sample-model:0.5.0`.
 
 ## Read This First
 
@@ -25,6 +48,8 @@ key composition.
 | Run it locally | [Quick Start](#quick-start) |
 | Pick standalone, Sentinel, or Cluster | [Choose the Redis mode](#choose-the-redis-mode) |
 | Change only application settings | [Configuration](#configuration) |
+| Reuse frequently requested JSON in this process | [Optional L1 reads](#optional-l1-reads-source-checkout) |
+| Serve an explicitly public product catalog with Rust edge policies | [Public catalog source example](docs/public-edge.md) |
 | Enable Glowroot telemetry | [Glowroot Telemetry](#glowroot-telemetry) |
 | Diagnose a failure | [Common problems](#common-problems) |
 
@@ -34,13 +59,13 @@ compiler path; they are not packaged as runtime classes.
 
 ## Current Checkout
 
-This update aligns the platform with REST `4.7.1` and optional agent `0.7.0`.
+This update aligns the platform with REST `4.8.0` and optional agent `0.7.1`.
 Use the native file packaged with the dependency you selected. Do not mix older SO/DLL files.
 Business code, URLs and configuration keys stay the same. Telemetry remains disabled by default.
 The HTTP micro memory gate does not guarantee the same overhead for a database job or a richer profile.
 
-Version `0.7.1` uses platform parent `4.7.1`. Rebuild the application with the aligned
-dependencies. See [release notes](docs/RELEASE_NOTES_v0.7.1.md). Runtime settings and URLs are unchanged.
+Version `0.8.0` uses platform parent `4.8.0`. Rebuild the application with the aligned
+dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.0.md). Runtime settings and URLs are unchanged.
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
@@ -48,7 +73,7 @@ dependencies. See [release notes](docs/RELEASE_NOTES_v0.7.1.md). Runtime setting
 - Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
 - REST uses the `29/7/6/6` ABI line. The cache package verifies its own Redis ABI `6` contract.
 
-The optional Glowroot micro telemetry plane is available through the aligned REST `4.7.1` runtime.
+The optional Glowroot micro telemetry plane is available through the aligned REST `4.8.0` runtime.
 It is disabled by default. Enable it only when this service must send bounded HTTP and native Redis
 timings to an existing Glowroot Central deployment. No handler or projection code changes.
 
@@ -185,8 +210,142 @@ java "-Dreactor.config.file=src/main/resources/config/production.properties;src/
 | `rust-spring.properties` | Small local defaults |
 | `config/production.properties` | Safe production limits and timeouts |
 | `config/advanced-tuning.properties` | Route limits, native trim, and namespace overrides |
+| `config/l1.properties` | Optional bounded detail/segment L1 storage in this source checkout |
 
 Reader and writer namespaces must match. If the writer publishes `crm.customer.campaign`, the reader must use the same campaign namespace.
+
+## Optional L1 Reads (Source Checkout)
+
+This source change adds an opt-in L1 reader. It is not in the published cache `0.9.0`
+package yet. Build the matching cache library and its codegen artifact locally first:
+
+```powershell
+mvn -B -ntp -f ../rust-java-rest/pom.xml install
+mvn -B -ntp -f ../java-rust-cache/pom.xml install
+mvn -B -ntp clean verify
+```
+
+Use L1 when the same customer or segment is requested often. Redis remains the source
+of the versioned snapshot. A hit avoids fetching the JSON from Redis again. Java
+handlers, validation and response codes do not change. This is not a Rust edge bypass.
+
+The sample contract allows L1 selection at build time:
+
+```java
+@GenerateProjectionReader(
+    rootPrefix = "sample.cache.customer",
+    generatedName = "CustomerCacheReader",
+    restBean = true,
+    allowL1 = true)
+public interface CustomerCacheService {
+    @ProjectionIdRead(projection = "detail")
+    CacheReadValue customerValue(long id);
+}
+```
+
+Return `CacheResponses.valueProblem(customerCache.customerValue(id))` from the handler.
+With L1 disabled, this forwards the Redis byte array as a raw response. No snapshot
+wrapper is created. With L1 enabled, the same method returns an owned snapshot.
+The response writer releases its pin after writing or cancellation. Do not close it
+after handing it to the response helper. Existing result/snapshot APIs still work.
+
+The normal startup still uses Redis-only readers. To enable L1 for detail and segment:
+
+```powershell
+mvn -q `
+  "-Dreactor.config.file=src/main/resources/config/l1.properties" `
+  "-Dreactor.cache.redis.host=127.0.0.1" `
+  "-Dreactor.cache.redis.port=16379" `
+  compile exec:java
+```
+
+| Setting in this overlay | Effect |
+| --- | --- |
+| `sample.cache.customer.detail.l1.max-entries=16` | Keeps up to 16 detail entries in a fixed slab. |
+| `sample.cache.customer.detail.l1.max-entry-bytes=2048` | Caches detail payloads up to 2 KiB locally. |
+| `sample.cache.customer.segment.l1.max-entries=4` | Keeps up to four segment entries. |
+| `sample.cache.customer.segment.l1.max-entry-bytes=32768` | Caches segment payloads up to 32 KiB locally. |
+| `sample.cache.customer.detail.l1.max-bytes=65536` | Caps detail slab plus estimated metadata. |
+| `sample.cache.customer.segment.l1.max-bytes=163840` | Caps segment slab plus estimated metadata. |
+| `sample.cache.customer.detail.l1.max-age-ms=1000` | Refetches an expired detail entry. Segment uses the same 1000 ms age. |
+| `sample.cache.customer.segment.l1.max-age-ms=1000` | Refetches an expired segment entry. |
+| `sample.cache.customer.detail.l1.max-key-chars=256` | Limits the stored detail/index key to 256 UTF-16 units. |
+| `sample.cache.customer.segment.l1.max-key-chars=256` | Applies the same key bound to segment entries. |
+| `sample.cache.customer.l1.max-entries=0` | Leaves projections disabled unless they have their own enabled setting. A JVM/global runtime override of 0 disables all of them. |
+| `sample.cache.customer.version-cache-ms=1000` | Checks the snapshot version at most once per second in sequential reads. Concurrent expired readers may each check it. |
+
+The two slabs total about 0.17 MiB. This is storage, not the application's total RSS.
+Status, campaign and metadata remain Redis-only. Payloads above the entry limit bypass
+L1; they do not become errors.
+
+These limits size the cache, not the HTTP response. If your customer JSON regularly
+exceeds 2 KiB, increase both `sample.cache.customer.detail.l1.max-entry-bytes` and
+`sample.cache.customer.detail.l1.max-bytes`. For example, `8192` and `196608` allow
+16 entries of up to 8 KiB. For larger segment lists, use
+`sample.cache.customer.segment.l1.max-entry-bytes=131072` together with
+`sample.cache.customer.segment.l1.max-bytes=655360`. This reserves more local memory.
+Keep the smaller recipe when larger replies are rare; they still return through Redis.
+
+The customer-by-ID and segment endpoints now use an owned snapshot. On an L1 hit,
+its bytes are copied directly from the slab to the native HTTP buffer, without a
+Java payload array. This is not zero-copy networking: the slab-to-response copy remains.
+Rust owns the large native frame until sending ends. Returning it to the pool does not
+guarantee that its pages immediately return to the operating system.
+The generated reader pins this snapshot directly, without creating an intermediate lease.
+The original `CacheReadResult` getters still return independent byte arrays.
+
+With L1 disabled, Redis still returns a `byte[]`; the snapshot only owns that result.
+It adds no slab, but it does create small ownership objects.
+L1 trades local memory for fewer Redis reads. It is not a guaranteed RSS reduction.
+Keep the normal Redis-only configuration when minimum memory matters most.
+
+| Your use case | Choose |
+| --- | --- |
+| Return the prepared JSON unchanged | `CacheReadSnapshot` and `CacheResponses.ownedJson(...)` |
+| Inspect or modify JSON bytes in Java | The existing `CacheReadResult` getters |
+
+For example, inside your own controller:
+
+```java
+@GetMapping("/{id}")
+public ResponseEntity<?> customer(@PathVariable("id") long id) {
+    return CacheResponses.ownedJson(
+        customerCache.customerSnapshot(id),
+        "customer_not_cached", "customer_cache_not_ready");
+}
+```
+
+The helper takes ownership. The writer releases it after writing, on error, or when
+a retained native buffer retry is aborted. A too-small buffer keeps the same snapshot
+for retry; the Java handler does not run again. Do not reuse one snapshot for another
+HTTP request. Close it yourself if you obtain it but decide not to return it.
+Do not put a snapshot returned through `ownedJson(...)` in a controller-level
+try-with-resources block: that would close it before the framework writes the response.
+The same URI, UTF-8 content and error contract are preserved. A matching REST runtime
+is required; an older native runtime without buffered-result retry fails closed on
+owned-body overflow rather than replaying business logic.
+
+L1 age is not Redis TTL. A newly published snapshot becomes visible after the configured
+version-check interval. Use `version-cache-ms=0` if every read must check the version;
+that still allows L1 payload reuse, but requires a Redis version read on every call.
+Source failures are not silently converted into stale responses. Do not choose L1 for
+data that cannot tolerate the selected version-check interval.
+Keep the L1 age shorter than the snapshot TTL. L1 does not check Redis key expiry on
+every hit. If deletion/expiry must be reflected on every read, keep that projection Redis-only.
+
+To disable L1 while keeping the overlay, add
+`-Dsample.cache.customer.l1.max-entries=0`, or set
+`SAMPLE_CACHE_CUSTOMER_L1_MAX_ENTRIES=0`. To check that L1 is actually used:
+
+```powershell
+curl.exe http://127.0.0.1:8080/api/v1/cache/customers/cache-metrics
+```
+
+The new `l1` object reports `enabled_projections`, `hits`, `misses`, `slab_bytes`
+and `active_borrows`. After requests have drained, `active_borrows` should be zero.
+Closing the managed generated reader drops its L1 storage ownership. The Redis client
+has its own lifecycle. See the [L1 contract](https://github.com/esasmer-dou/java-rust-cache/blob/master/docs/versioned-l1.md)
+for freshness, lease and memory limits.
 
 ## Glowroot Telemetry
 
@@ -194,15 +353,15 @@ This application runs on Rust-Java REST. It does not need a Spring starter or a 
 runtime dependency. Telemetry is disabled by default. When enabled, HTTP routes and native Redis
 read timings are collected inside the same Rust runtime. Handler and projection code do not change.
 
-This sample already uses the production platform `4.7.1` with Glowroot ABI `6`. The optional
-`java-rust-glowroot-agent:0.7.0` JAR is needed only when you want `-javaagent` syntax; the embedded
+This sample already uses the production platform `4.8.0` with Glowroot ABI `6`. The optional
+`java-rust-glowroot-agent:0.7.1` JAR is needed only when you want `-javaagent` syntax; the embedded
 REST telemetry runtime does not require a separate agent dependency:
 
 ```xml
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.7.1</version>
+  <version>4.8.0</version>
   <relativePath/>
 </parent>
 ```
@@ -355,4 +514,4 @@ If Maven returns `401`, check the token, repository access, environment variable
 - [Turkish PDF guide](docs/rest-sample-cache-reader-user-guide.tr.pdf)
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
-- [v0.7.1 release notes](docs/RELEASE_NOTES_v0.7.1.md)
+- [v0.8.0 release notes](docs/RELEASE_NOTES_v0.8.0.md)

@@ -6,6 +6,7 @@ import com.reactor.rust.annotations.RequestParam;
 import com.reactor.rust.annotations.RestController;
 import com.reactor.rust.annotations.RouteWorkload;
 import com.reactor.rust.cache.api.CacheReadResult;
+import com.reactor.rust.cache.api.CacheReadValue;
 import com.reactor.rust.cache.http.CacheResponses;
 import com.reactor.rust.http.MediaType;
 import com.reactor.rust.http.RawResponse;
@@ -25,8 +26,8 @@ public final class CustomerCacheHandler {
 
     @GetMapping("/{id}")
     @RouteWorkload(value = RouteWorkload.Type.CACHE_READ, budget = "cache-read-point")
-    public ResponseEntity<RawResponse> customer(@PathVariable("id") long id) {
-        return toResponse(customerCache.customer(id), "customer_not_cached");
+    public ResponseEntity<?> customer(@PathVariable("id") long id) {
+        return valueResponse(customerCache.customerValue(id), "customer_not_cached");
     }
 
     @GetMapping("/by-customer-no")
@@ -36,8 +37,8 @@ public final class CustomerCacheHandler {
     }
 
     @GetMapping("/segments/{segment}")
-    public ResponseEntity<RawResponse> bySegment(@PathVariable("segment") String segment) {
-        return toResponse(customerCache.customersBySegment(segment), "customer_segment_not_cached");
+    public ResponseEntity<?> bySegment(@PathVariable("segment") String segment) {
+        return valueResponse(customerCache.segmentValue(segment), "customer_segment_not_cached");
     }
 
     @GetMapping("/statuses/{status}")
@@ -64,5 +65,10 @@ public final class CustomerCacheHandler {
 
     private static ResponseEntity<RawResponse> toResponse(CacheReadResult result, String missCode) {
         return COMMON_ERRORS ? CacheResponses.problem(result) : CacheResponses.json(result, missCode, "customer_cache_not_ready");
+    }
+
+    private static ResponseEntity<?> valueResponse(CacheReadValue value, String missCode) {
+        return COMMON_ERRORS ? CacheResponses.valueProblem(value)
+                : CacheResponses.valueJson(value, missCode, "customer_cache_not_ready");
     }
 }
