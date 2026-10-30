@@ -1,19 +1,19 @@
 # rest-sample-cache-reader
 
-## Prepared Patch 0.8.1
+## Version 0.8.1
 
-This checkout uses REST/platform 4.8.1 and cache 0.9.1. It includes
+This checkout uses REST/platform 4.8.1, cache 0.9.1 and model 0.5.1. It includes
 the ARM provenance packaging fix without changing business logic or native ABIs.
-Publication is pending approval; 0.8.0 remains the published sample version.
+Use the aligned 0.8.1 artifacts; earlier 0.8.0 release notes remain historical.
 [Patch notes](docs/RELEASE_NOTES_v0.8.1.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
 
-## Start With 0.8.0
+## Start With 0.8.1
 
 The real projection read flow supports optional versioned L1 and owned JSON bodies. Separate profiles demonstrate public edge policies, native views, JWT, tracing, shared slabs and outbound HTTP. The default remains a Redis-only read service.
 
-[Usage guide](docs/functional-operations.md) · [Release notes](docs/RELEASE_NOTES_v0.8.0.md)
+[Usage guide](docs/functional-operations.md) · [Release notes](docs/RELEASE_NOTES_v0.8.1.md)
 
 
 Feature, run and error map: [Usage examples](docs/functional-operations.md).
@@ -42,7 +42,7 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.8.0`, `java-rust-cache:0.9.0`, `rust-sample-model:0.5.0`.
+Current versions: `rust-java-rest:4.8.1`, `java-rust-cache:0.9.1`, `rust-sample-model:0.5.1`.
 
 ## Read This First
 
@@ -66,13 +66,13 @@ compiler path; they are not packaged as runtime classes.
 
 ## Current Checkout
 
-This update aligns the platform with REST `4.8.0` and optional agent `0.7.1`.
+This update aligns the platform with REST `4.8.1` and optional agent `0.7.1`.
 Use the native file packaged with the dependency you selected. Do not mix older SO/DLL files.
 Business code, URLs and configuration keys stay the same. Telemetry remains disabled by default.
 The HTTP micro memory gate does not guarantee the same overhead for a database job or a richer profile.
 
-Version `0.8.0` uses platform parent `4.8.0`. Rebuild the application with the aligned
-dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.0.md). Runtime settings and URLs are unchanged.
+Version `0.8.1` uses platform parent `4.8.1`. Rebuild the application with the aligned
+dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.1.md). Runtime settings and URLs are unchanged.
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
@@ -80,7 +80,7 @@ dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.0.md). Runtime setting
 - Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
 - REST uses the `29/7/6/6` ABI line. The cache package verifies its own Redis ABI `6` contract.
 
-The optional Glowroot micro telemetry plane is available through the aligned REST `4.8.0` runtime.
+The optional Glowroot micro telemetry plane is available through the aligned REST `4.8.1` runtime.
 It is disabled by default. Enable it only when this service must send bounded HTTP and native Redis
 timings to an existing Glowroot Central deployment. No handler or projection code changes.
 
@@ -357,7 +357,7 @@ This application runs on Rust-Java REST. It does not need a Spring starter or a 
 runtime dependency. Telemetry is disabled by default. When enabled, HTTP routes and native Redis
 read timings are collected inside the same Rust runtime. Handler and projection code do not change.
 
-This sample already uses the production platform `4.8.0` with Glowroot ABI `6`. The optional
+This sample already uses the platform `4.8.1` with Glowroot ABI `6`. The optional
 `java-rust-glowroot-agent:0.7.1` JAR is needed only when you want `-javaagent` syntax; the embedded
 REST telemetry runtime does not require a separate agent dependency:
 
@@ -365,7 +365,7 @@ REST telemetry runtime does not require a separate agent dependency:
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.8.0</version>
+  <version>4.8.1</version>
   <relativePath/>
 </parent>
 ```
