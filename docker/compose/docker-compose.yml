@@ -1,0 +1,182 @@
+# From this directory, after preparing artifacts:
+# docker compose up --build --wait --wait-timeout 180
+# Native catalog-only alternative (not a customer DB/command replacement):
+# docker compose -f docker-compose.yml -f native-provider.yml up --build --wait --wait-timeout 180
+# Local development topology only: Redis/DB are private, HTTP binds loopback.
+name: reactor-sample
+
+x-app: &app
+  platform: linux/amd64
+  cpus: "1.0"
+  mem_limit: 128m
+  memswap_limit: 128m
+  pids_limit: 128
+  init: false
+  restart: "no"
+  stop_grace_period: 15s
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  logging:
+    driver: json-file
+    options: {max-size: "5m", max-file: "2"}
+
+x-build: &build
+  context: ../../..
+  dockerfile: rest-sample-cache-reader/docker/compose/Dockerfile
+  target: runtime
+
+x-db: &db
+  SAMPLE_DB_JDBC_URL: jdbc:postgresql://postgres:5432/reactor_sample?connectTimeout=3&socketTimeout=5
+  SAMPLE_DB_USERNAME: reactor
+  SAMPLE_DB_PASSWORD: reactor
+  SAMPLE_DB_DRIVER_CLASS_NAME: org.postgresql.Driver
+  SAMPLE_DB_MAXIMUM_POOL_SIZE: "2"
+  SAMPLE_DB_MINIMUM_IDLE: "0"
+  SAMPLE_DB_CONNECTION_TIMEOUT_MS: "3000"
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    cpus: "1.0"
+    mem_limit: 128m
+    memswap_limit: 128m
+    command: ["postgres", "-c", "shared_buffers=16MB", "-c", "work_mem=1MB", "-c", "max_connections=16", "-c", "statement_timeout=5000", "-c", "idle_in_transaction_session_timeout=5000"]
+    environment: {POSTGRES_DB: reactor_sample, POSTGRES_USER: reactor, POSTGRES_PASSWORD: reactor}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/10-sample.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U reactor -d reactor_sample && psql -U reactor -d reactor_sample -Atqc \"select 1 from sample_customers where customer_no='CUST-1001'\" | grep -qx 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 10s
+
+  redis:
+    image: redis:7-bookworm
+    cpus: "1.0"
+    mem_limit: 128m
+    memswap_limit: 128m
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "48mb", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -qx PONG"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+
+  cache-writer:
+    <<: *app
+    build:
+      <<: *build
+      args:
+        SAMPLE_DIR: rest-sample-cache-writer
+        MAIN_CLASS: com.reactor.sample.cache.writer.app.RestSampleCacheWriterApplication
+    environment:
+      <<: *db
+      SAMPLE_DB_SCHEMA_INIT: "false"
+      SAMPLE_DB_READ_ONLY: "true"
+      SAMPLE_WRITER_RUN_ONCE: "false"
+      SAMPLE_WRITER_INTERVAL_MS: "3000"
+      SAMPLE_WRITER_SCHEDULER_THREADS: "1"
+      SAMPLE_WRITER_PAGE_SIZE: "100"
+      SAMPLE_WRITER_CACHE_TTL_MS: "30000"
+      SAMPLE_WRITER_LOCK_TTL_MS: "15000"
+      SAMPLE_WRITER_CACHE_TTL_SAFETY_MARGIN_MS: "5000"
+      REACTOR_CACHE_REDIS_HOST: redis
+      REACTOR_CACHE_REDIS_PORT: "6379"
+      REACTOR_CACHE_REDIS_SNAPSHOT_BATCH_ENABLED: "true"
+      REACTOR_CACHE_REDIS_READ_CONNECTIONS: "1"
+      REACTOR_CACHE_REDIS_WRITE_CONNECTIONS: "1"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "/app/container-check.sh", "writer"]
+      interval: 5s
+      timeout: 22s
+      retries: 20
+      start_period: 10s
+
+  cache-reader:
+    <<: *app
+    build:
+      <<: *build
+      args:
+        SAMPLE_DIR: rest-sample-cache-reader
+        MAIN_CLASS: com.reactor.sample.cache.reader.app.RestSampleCacheReaderApplication
+    ports: ["127.0.0.1:${READER_PORT:-18081}:8080"]
+    environment:
+      SERVER_HOST: 0.0.0.0
+      REACTOR_CACHE_REDIS_HOST: redis
+      REACTOR_CACHE_REDIS_PORT: "6379"
+      REACTOR_CACHE_REDIS_READ_CONNECTIONS: "1"
+    depends_on:
+      cache-writer: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "/app/container-check.sh", "reader"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  dubbo-provider:
+    <<: *app
+    build:
+      <<: *build
+      args:
+        SAMPLE_DIR: rest-sample-dubbo-provider
+        MAIN_CLASS: com.reactor.sample.dubbo.provider.app.RestSampleDubboProviderApplication
+    environment:
+      <<: *db
+      # Keep bootstrap true for the optional idempotency ledger schema; the
+      # canonical customer schema and seed already come from init.sql.
+      SAMPLE_DB_SCHEMA_INIT: "true"
+      SAMPLE_DB_WARMUP: "true"
+      DUBBO_PROVIDER_HOST: dubbo-provider
+      DUBBO_PROVIDER_BIND_HOST: 0.0.0.0
+      DUBBO_PROVIDER_PORT: "20880"
+      DUBBO_PROVIDER_EXECUTOR_IO_THREADS: "1"
+      DUBBO_PROVIDER_EXECUTOR_CORE_THREADS: "1"
+      DUBBO_PROVIDER_EXECUTOR_MAX_THREADS: "4"
+      DUBBO_PROVIDER_EXECUTOR_QUEUE_CAPACITY: "16"
+      REACTOR_DUBBO_REGISTRY_ENABLED: "false"
+      DUBBO_APPLICATION_QOS_ENABLE: "false"
+      DUBBO_METRICS_ENABLE: "false"
+      IO_NETTY_ALLOCATOR_NUMDIRECTARENAS: "1"
+      IO_NETTY_ALLOCATOR_NUMHEAPARENAS: "1"
+      IO_NETTY_RECYCLER_MAXCAPACITYPERTHREAD: "0"
+      IO_NETTY_NOPREFERDIRECT: "true"
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "/app/container-check.sh", "provider"]
+      interval: 5s
+      timeout: 3s
+      retries: 25
+      start_period: 10s
+
+  dubbo-consumer:
+    <<: *app
+    build:
+      <<: *build
+      args:
+        SAMPLE_DIR: rest-sample-dubbo-consumer
+        MAIN_CLASS: com.reactor.sample.dubbo.consumer.app.RestSampleDubboConsumerApplication
+    ports: ["127.0.0.1:${CONSUMER_PORT:-18082}:8080"]
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SAMPLE_DUBBO_DISCOVERY: static
+      REACTOR_DUBBO_PROVIDERS: dubbo-provider:20880
+      REACTOR_DUBBO_NATIVE_ASYNC_WORKERS: "1"
+      REACTOR_DUBBO_NATIVE_ASYNC_QUEUE_CAPACITY: "16"
+      REACTOR_DUBBO_MAX_INFLIGHT: "16"
+      SAMPLE_CONSUMER_READINESS_CONTRACTS: full
+    depends_on:
+      dubbo-provider: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "/app/container-check.sh", "consumer"]
+      interval: 5s
+      timeout: 6s
+      retries: 25
+
+volumes:
+  postgres-data:

@@ -64,11 +64,10 @@ public final class CustomerCacheHandler {
     }
 
     private static ResponseEntity<RawResponse> toResponse(CacheReadResult result, String missCode) {
-        return COMMON_ERRORS ? CacheResponses.problem(result) : CacheResponses.json(result, missCode, "customer_cache_not_ready");
+        return CacheResponses.reply(result, missCode, "customer_cache_not_ready", COMMON_ERRORS);
     }
 
     private static ResponseEntity<?> valueResponse(CacheReadValue value, String missCode) {
-        return COMMON_ERRORS ? CacheResponses.valueProblem(value)
-                : CacheResponses.valueJson(value, missCode, "customer_cache_not_ready");
+        return CacheResponses.reply(value, missCode, "customer_cache_not_ready", COMMON_ERRORS);
     }
 }

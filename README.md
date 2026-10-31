@@ -2,12 +2,72 @@
 
 ## Version 0.8.1
 
-This checkout uses REST/platform 4.8.1, cache 0.9.1 and model 0.5.1. It includes
+Published sample 0.8.1 uses REST/platform 4.8.1, cache 0.9.1 and model 0.5.1. It includes
 the ARM provenance packaging fix without changing business logic or native ABIs.
 Use the aligned 0.8.1 artifacts; earlier 0.8.0 release notes remain historical.
 [Patch notes](docs/RELEASE_NOTES_v0.8.1.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
+
+## Compose
+
+**Unpublished source workflow.** This topology and the new helper-based examples
+below require coordinated checkout changes, not the published sample `0.8.1` alone.
+Matching REST/platform, cache and Dubbo source dependencies must already be installed
+or resolvable. `--prepare` / `-Prepare` packages the samples; it does not build those
+framework dependencies. New JNI exports also need matching REST native resources;
+existing ABI numbers are unchanged. Kubernetes validation is not Compose-engine
+execution proof, and this recipe does not establish ARM hardware qualification.
+
+The shared [Compose topology](docker/compose/docker-compose.yml) starts PostgreSQL
+with schema/seed, Redis 7, writer, reader, provider and consumer. Clone all four
+`rest-sample-*` repositories under the same parent, keeping their repository names.
+Prerequisites: Linux/amd64 Docker Engine, Compose v2 with `--wait`, and JDK 21/Maven
+with the checkout's aligned dependencies installed or resolvable. Bash also needs
+`curl`, `jq` and `timeout`; PowerShell needs version 7. Maven credentials remain on
+the host, not in images. Run from this repository's root:
+
+```bash
+bash scripts/verify-compose-topology.sh --prepare
+# Alternative: native catalog provider + matching native-static consumer
+bash scripts/verify-compose-topology.sh --prepare --native-provider
+```
+
+PowerShell equivalent: `pwsh -File scripts/verify-compose-topology.ps1 -Prepare`;
+add `-NativeProvider` for the alternative. Preparation runs `clean package` with
+tests skipped and copies runtime dependencies for all four samples. Without
+`--prepare` / `-Prepare`, supply the selected profile's existing `target/*.jar` and
+`target/dependency/*.jar`; the native provider uses `target/native-provider/`
+instead. Default profiles are `full-provider` and `full-dubbo-consumer`; native mode
+uses `native-provider` and `native-static-consumer`. Native mode also needs the
+unchanged ABI-3 resources under sibling checkout
+`java-rust-dubbo-spring-boot/java-rust-dubbo-native-linux-x64/src/main/resources/native/`.
+
+All six containers have 1 CPU / 128 MiB limits; the applications use OpenJ9 Java 21
+with JNI. Reader HTTP binds `127.0.0.1:18081`, consumer HTTP `127.0.0.1:18082`;
+PostgreSQL/Redis stay private. Override `READER_PORT` / `CONSUMER_PORT` if occupied.
+Reader readiness is `/app/readiness`; consumer readiness is `/app/ready`. Both have
+`/app/health`. Writer has no HTTP server: its check requires live fenced projection
+pointers. Provider readiness is TCP, strengthened by the consumer's catalog RPC.
+
+The full smoke checks POST/PATCH through consumer/provider into PostgreSQL,
+consumer DB reads, writer publication, advanced fencing tokens, live Redis TTLs
+and converged reader JSON. **The native overlay is catalog-only**, not a customer
+DB/command provider. Its matching consumer calls `CatalogJsonService`, not
+`NestedCatalogService`; setting `surface=catalog-only` on the full consumer is not
+a substitute. Native smoke checks catalog RPC and the same changing
+PostgreSQL-to-writer-to-Redis-to-reader path using explicit SQL INSERT/UPDATE/DELETE,
+which bypasses the provider. It does not claim customer RPC or streaming coverage.
+
+Both modes take five bounded PID/cgroup RSS samples below 128 MiB. Evidence goes to
+the shared parent's `.tmp/wp3-*`; failures are nonzero. Inspect `startup.log`,
+`containers.log` and `result.properties`. Default cleanup removes only the unique
+smoke project's containers and volume; `--keep` / `-Keep` retains them for diagnosis.
+These are idiomatic application responsibilities with generated wiring and explicit
+Java business code, not minimal benchmark handlers. The demo uses development
+credentials and single DB/Redis instances, not an HA production deployment. Limits
+and smoke assertions are not runtime proof, a sustained-load/p99 result or a capacity
+guarantee; measure the selected profile, dataset and warmup separately.
 
 ## Start With 0.8.1
 
@@ -245,8 +305,12 @@ public interface CustomerCacheService {
 }
 ```
 
-The actual ID and segment handlers use `CacheReadValue`: `CacheResponses.valueJson(...)`
-by default, or `CacheResponses.valueProblem(...)` when `sample.errors.common-contract=true`.
+The current, unpublished ID and segment handlers pass `CacheReadValue` to
+`CacheResponses.reply(value, missCode, notReadyCode, COMMON_ERRORS)`. The explicit
+boolean preserves `sample.errors.common-contract=false` (legacy JSON) or `true`
+(problem details). It overrides the helper's three-argument startup policy
+`reactor.cache.http.problem-details=false`; that setting does not change this sample.
+The published `valueJson(...)` / `valueProblem(...)` helpers remain available.
 With L1 disabled, this forwards the Redis byte array as a raw response. No snapshot
 wrapper is created. With L1 enabled, the value carries an owned snapshot.
 The response writer releases its pin after writing or cancellation. Do not close it
@@ -304,7 +368,7 @@ Keep the normal Redis-only configuration when minimum memory matters most.
 
 | Your use case | Choose |
 | --- | --- |
-| Return prepared JSON through the current HTTP routes | `CacheReadValue` and `valueJson(...)` / `valueProblem(...)` |
+| Return prepared JSON through the current source HTTP routes | `CacheReadValue` and `CacheResponses.reply(..., COMMON_ERRORS)` |
 | Explicitly own a snapshot in custom code | `CacheReadSnapshot` and `CacheResponses.ownedJson(...)` |
 | Inspect or modify JSON bytes in Java | The existing `CacheReadResult` getters |
 

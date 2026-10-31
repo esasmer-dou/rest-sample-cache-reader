@@ -1,0 +1,21 @@
+# Same six services, but native-provider is catalog-only, not DB/command capable.
+# Pair it with native-static-consumer (CatalogJsonService, version 0.0.0), NOT
+# the full consumer's NestedCatalogService, even with surface=catalog-only.
+# Prepare using verify-compose-topology.sh --native-provider --prepare (or PS
+# -NativeProvider -Prepare), then use both files. Do not claim full E2E coverage.
+services:
+  dubbo-provider:
+    build:
+      target: native-provider
+      args:
+        ARTIFACT_DIR: target/native-provider
+        MAIN_CLASS: com.reactor.sample.dubbo.provider.nativeprovider.NativeProviderApplication
+    environment:
+      DUBBO_PROVIDER_HOST: 0.0.0.0
+      DUBBO_PROVIDER_BIND_HOST: 0.0.0.0
+      SAMPLE_NATIVE_PROVIDER_BUSINESS_WORKERS: "2"
+      SAMPLE_NATIVE_PROVIDER_SERVICE_MAX_CONCURRENT: "2"
+  dubbo-consumer:
+    build:
+      args:
+        MAIN_CLASS: com.reactor.sample.dubbo.consumer.nativestatic.NativeStaticConsumerApplication

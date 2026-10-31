@@ -2,12 +2,76 @@
 
 ## 0.8.1 Sürümü
 
-Bu kaynak ağacı REST/platform 4.8.1, cache 0.9.1 ve model 0.5.1 kullanır. ARM manifesti
+Yayımlanmış sample 0.8.1, REST/platform 4.8.1, cache 0.9.1 ve model 0.5.1 kullanır. ARM manifesti
 düzeltmesini içerir. İş kodu ve native ABI'ler değişmez.
 Önceki 0.8.0 sürüm notları tarihsel kayıttır.
 [Düzeltme notları](docs/RELEASE_NOTES_v0.8.1.tr.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
+
+## Compose
+
+**Henüz yayımlanmamış kaynak akışı.** Bu topoloji ve aşağıdaki yeni yardımcı API
+örnekleri birlikte güncellenmiş kaynakları gerektirir; yayımlanmış sample `0.8.1`
+tek başına yeterli değildir. Uyumlu REST/platform, cache ve Dubbo kaynak bağımlılıkları
+önceden kurulmuş veya çözülebilir olmalıdır. `--prepare` / `-Prepare` sample'ları
+paketler; bu framework bağımlılıklarını derlemez. Yeni JNI export'ları için eşleşen
+REST native kaynakları da gerekir; mevcut ABI numaraları değişmez. Kubernetes
+doğrulaması Compose motorunun çalıştırıldığına kanıt değildir; bu tarif ARM
+donanımının doğrulandığı anlamına da gelmez.
+
+Ortak [Compose topolojisi](docker/compose/docker-compose.yml); şema/seed içeren
+PostgreSQL, Redis 7, writer, reader, provider ve consumer başlatır. Dört
+`rest-sample-*` deposunu kendi adlarını koruyarak aynı üst dizine alın.
+Gereksinimler: Linux/amd64 Docker Engine, `--wait` destekli Compose v2 ve kaynak
+ağacının uyumlu bağımlılıklarını çözebilen JDK 21/Maven. Bash için `curl`, `jq`,
+`timeout`; PowerShell için sürüm 7 gerekir. Maven kimlik bilgileri host'ta kalır,
+image içine alınmaz. Bu deponun kök dizininden çalıştırın:
+
+```bash
+bash scripts/verify-compose-topology.sh --prepare
+# Alternatif: native katalog provider + eşleşen native-static consumer
+bash scripts/verify-compose-topology.sh --prepare --native-provider
+```
+
+PowerShell karşılığı: `pwsh -File scripts/verify-compose-topology.ps1 -Prepare`;
+alternatif için `-NativeProvider` ekleyin. Hazırlık, dört sample için testleri
+çalıştırmadan `clean package` yapar ve runtime bağımlılıklarını kopyalar.
+`--prepare` / `-Prepare` kullanılmıyorsa seçili profilin `target/*.jar` ve
+`target/dependency/*.jar` çıktıları hazır olmalıdır. Native provider bunların yerine
+`target/native-provider/` kullanır. Varsayılan profiller `full-provider` ve
+`full-dubbo-consumer`; native mod profilleri `native-provider` ve
+`native-static-consumer` olur. Native mod ayrıca yan yana alınmış
+`java-rust-dubbo-spring-boot/java-rust-dubbo-native-linux-x64/src/main/resources/native/`
+dizinindeki değiştirilmemiş ABI-3 kaynaklarını gerektirir.
+
+Altı container'ın her biri 1 CPU / 128 MiB ile sınırlıdır; uygulamalar OpenJ9
+Java 21 ve JNI kullanır. Reader HTTP `127.0.0.1:18081`, consumer HTTP
+`127.0.0.1:18082` üzerinden açılır; PostgreSQL/Redis dışarı açılmaz. Portlar doluysa
+`READER_PORT` / `CONSUMER_PORT` değiştirin. Reader readiness adresi
+`/app/readiness`, consumer readiness adresi `/app/ready` olur. İkisinde de
+`/app/health` vardır. Writer HTTP sunmaz; kontrolü canlı fenced projection
+pointer'larını doğrular. Provider TCP kontrolünü consumer'ın gerçek katalog RPC'si
+güçlendirir.
+
+Full smoke; consumer/provider üzerinden POST/PATCH ile PostgreSQL yazımını,
+consumer DB sorgusunu, writer yayınını, artan fencing token'ını, canlı Redis TTL'ini
+ve reader JSON yakınsamasını denetler. **Native overlay yalnız katalog içindir**;
+müşteri DB/command provider değildir. Eşleşen consumer `NestedCatalogService` yerine
+`CatalogJsonService` çağırır; full consumer'da yalnız `surface=catalog-only` seçmek
+yeterli olmaz. Native smoke katalog RPC'sini ve aynı değişen
+PostgreSQL-writer-Redis-reader akışını doğrudan SQL INSERT/UPDATE/DELETE ile
+denetler. Bu SQL provider'ı atlar; müşteri RPC veya streaming kapsamı iddia edilmez.
+
+İki mod da PID/cgroup RSS için 128 MiB altında beş sınırlı örnek alır. Kanıtlar
+ortak üst dizindeki `.tmp/wp3-*` altına yazılır; hata sıfırdan farklı exit üretir.
+`startup.log`, `containers.log`, `result.properties` dosyalarını inceleyin.
+Varsayılan cleanup yalnız benzersiz smoke projesinin container ve volume'ünü siler;
+`--keep` / `-Keep` tanı için korur. Bu topoloji, üretilmiş bağlantılar ve açık Java
+iş koduyla doğal uygulama sorumluluklarını gösterir; minimal benchmark handler'ı
+değildir. Geliştirme kimlik bilgileri ve tek DB/Redis kullanır; HA production
+kurulumu değildir. Limitler ve smoke assertion'ları runtime kanıtı, sürekli yük/p99
+sonucu veya kapasite garantisi sayılmaz. Seçilen profil, veri ve warmup ayrı ölçülmelidir.
 
 ## 0.8.1 İle Başlayın
 
@@ -245,8 +309,13 @@ public interface CustomerCacheService {
 }
 ```
 
-Gerçek ID ve segment handler'ları `CacheReadValue` kullanır: varsayılan yardımcı
-`CacheResponses.valueJson(...)`, `sample.errors.common-contract=true` seçilirse `CacheResponses.valueProblem(...)` olur.
+Henüz yayımlanmamış güncel ID ve segment handler'ları `CacheReadValue` sonucunu
+`CacheResponses.reply(value, missCode, notReadyCode, COMMON_ERRORS)` ile döndürür.
+Açık boolean, `sample.errors.common-contract=false` (eski JSON) veya `true`
+(problem details) seçimini korur. Üç argümanlı yardımcının başlangıç politikası olan
+`reactor.cache.http.problem-details=false` yerine bu açık seçim geçerlidir;
+global ayar bu sample'ın davranışını değiştirmez. Yayımlanmış `valueJson(...)` /
+`valueProblem(...)` yardımcıları da korunur.
 L1 kapalıysa Redis'ten gelen byte dizisi doğrudan raw yanıta aktarılır. Snapshot
 sarmalayıcısı oluşturulmaz. L1 açıksa value, sahipliği kontrollü snapshot taşır.
 Yanıt yazıcısı, yazma veya iptal sonrasında pin'i bırakır. Yardımcı metoda devrettikten
@@ -305,7 +374,7 @@ sağlamaz. En düşük bellek önceliğinde normal Redis-only ayarını koruyun.
 
 | İhtiyacınız | Seçim |
 | --- | --- |
-| Hazır JSON'u mevcut HTTP route'larından sunmak | `CacheReadValue` ve `valueJson(...)` / `valueProblem(...)` |
+| Hazır JSON'u güncel kaynak HTTP route'larından sunmak | `CacheReadValue` ve `CacheResponses.reply(..., COMMON_ERRORS)` |
 | Özel kodda snapshot sahipliğini açıkça yönetmek | `CacheReadSnapshot` ve `CacheResponses.ownedJson(...)` |
 | Java'da JSON byte'larını incelemek veya değiştirmek | Mevcut `CacheReadResult` metotları |
 
