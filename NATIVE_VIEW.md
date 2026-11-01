@@ -2,7 +2,7 @@
 
 [English](NATIVE_VIEW.md) | [Turkish](NATIVE_VIEW.tr.md)
 
-This isolated source profile uses the published REST/codegen `4.8.0` APIs.
+This isolated source profile uses the published REST/codegen `4.8.2` APIs.
 The sample itself is not bundled into the framework JAR. The default Redis reader
 stays unchanged. See [feature selection/read costs](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.md).
 This profile describes the current checkout, not the contents of a previously
@@ -36,7 +36,7 @@ JARs do not gain account routes. The shared plain record does not auto-register 
 ## Run It
 
 Use Java 21, Maven 3.9+, a free port 8080 and authenticated
-GitHub Packages access to REST/platform 4.8.0 and model 0.5.0. From this sample
+GitHub Packages access to REST/platform 4.8.2 and model 0.5.2. From this sample
 directory build the selected profile. Install matching framework/model sources
 first only if you changed them; published artifacts need no source install.
 
@@ -55,7 +55,7 @@ mvn -Pnative-view exec:java
 Create a request in a second PowerShell terminal:
 
 ```powershell
-$cp = 'target-native-view/rest-sample-cache-reader-0.8.0.jar;target-native-view/lib/*'
+$cp = 'target-native-view/rest-sample-cache-reader-0.8.2.jar;target-native-view/lib/*'
 java -cp $cp com.reactor.sample.nativeview.AccountPayloadTool account.bin 'İstanbul'
 curl.exe -H 'Content-Type: application/octet-stream' --data-binary '@account.bin' http://localhost:8080/api/v1/accounts/view
 curl.exe -H 'Content-Type: application/octet-stream' --data-binary '@account.bin' http://localhost:8080/api/v1/accounts/dto

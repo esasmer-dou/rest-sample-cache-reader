@@ -4,7 +4,7 @@
 
 Bu isteğe bağlı sample profilini kaynak koddan derleyin; uygulaması yayımlanmış
 varsayılan `0.8.0` reader JAR'ında yoktur. Generated HTTP istemcisi, devre kesici
-ve native HS256 filtresi kullanır. Yayımlanmış `4.8.0` native paketi zaten
+ve native HS256 filtresi kullanır. Yayımlanmış `4.8.2` native paketi zaten
 `outbound-http` ve `edge-jwt` içerir; yalnız bu özellikler için native derleme
 gerekmez. Normal Redis okuyucusu değişmez. `outbound`, `native-view` ve varsayılan
 uygulama profillerini aynı derlemede birleştirmeyin.
@@ -27,7 +27,7 @@ verir. Bağlantı gizlice HTTP'ye çevrilmez.
 
 ## Eşleşen Bağımlılıklarla Derleyin
 
-Eşleşen yayımlanmış `4.8.0` core, platform ve starter paketlerini Maven ile
+Eşleşen yayımlanmış `4.8.2` core, platform ve starter paketlerini Maven ile
 çözümleyin, ardından sample profilini derleyin. Eşleşen native kütüphane zaten
 `outbound-http,edge-jwt` içerir. Yalnız gerekli özellikleri içermeyen özel bir
 artifact seçerseniz native derleme gerekir. [Native derleme rehberi](https://github.com/esasmer-dou/rust-java-rest/blob/master/platform/starter-http-client/NATIVE-INTEGRATION.tr.md)

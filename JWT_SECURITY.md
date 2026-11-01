@@ -2,7 +2,7 @@
 
 [English](JWT_SECURITY.md) | [Turkish](JWT_SECURITY.tr.md)
 
-This isolated sample profile uses the published REST/security 4.8.0 artifacts.
+This isolated sample profile uses the published REST/security 4.8.2 artifacts.
 The sample sources are in this repository, not inside the framework JAR. This
 profile describes this checkout; it is not a claim that these additions shipped
 in the published sample 0.8.0 JAR. Build the selected profile below. The
@@ -26,7 +26,7 @@ There is no remote JWKS fetch, extra executor or refresh thread.
 
 Run the following in Bash from the current `rest-sample-cache-reader` checkout.
 Prerequisites: full JDK 21 (including `jdk.crypto.ec`), Maven 3.9+, curl, a free
-8080 port and authenticated Maven access to the aligned REST/platform 4.8.0 set.
+8080 port and authenticated Maven access to the aligned REST/platform 4.8.2 set.
 For changed framework sources, install the matching artifacts first;
 source installation is not a prerequisite for using the published packages.
 
@@ -60,7 +60,7 @@ JWT_WORK=$(mktemp -d)
 java "$JWT_TOOL" keys "$JWT_WORK/issuer"
 java "-Dsample.jwt.public-key-directory=$JWT_WORK/issuer/public" \
   -Dsample.jwt.cache.enabled=true \
-  -cp 'target-jwt-security/rest-sample-cache-reader-0.8.0.jar:target-jwt-security/lib/*' \
+  -cp 'target-jwt-security/rest-sample-cache-reader-0.8.2.jar:target-jwt-security/lib/*' \
   com.reactor.sample.jwt.JwtApplication >"$JWT_WORK/server.log" 2>&1 &
 JWT_PID=$!
 trap 'kill "$JWT_PID" 2>/dev/null || true' EXIT

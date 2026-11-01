@@ -5,8 +5,8 @@
 Bu örneği, bütün ziyaretçilere aynı ürün JSON'unu sunmak için kullanın.
 Müşteri, kullanıcı ve yetkiye bağlı verileri normal sample içinde bırakın.
 `public-edge` sample uygulamasını bu kaynak koddan derleyin; uygulama yayımlanmış
-varsayılan `0.8.0` reader JAR'ında yoktur. Eşleşen yayımlanmış REST `4.8.0` ve cache
-`0.9.0` native paketleri zaten `edge-cache` desteği içerir. Sample uygulamasının
+varsayılan `0.8.0` reader JAR'ında yoktur. Eşleşen yayımlanmış REST `4.8.2` ve cache
+`0.9.2` native paketleri zaten `edge-cache` desteği içerir. Sample uygulamasının
 yayımlanması ile native özelliğin bulunması ayrı konulardır.
 
 ## Hangi Yolu Seçmeliyim?
@@ -37,12 +37,12 @@ mvn -B -ntp clean package dependency:copy-dependencies -Ppublic-edge \
 java -Drust.lib.path=/app/native/librust_hyper.so \
   -Dreactor.cache.redis.host=redis \
   -Dsample.public.edge.enabled=true \
-  -cp 'target-public-edge/rest-sample-cache-reader-0.8.0.jar:target-public-edge/dependency/*' \
+  -cp 'target-public-edge/rest-sample-cache-reader-0.8.2.jar:target-public-edge/dependency/*' \
   com.reactor.sample.cache.publiccatalog.PublicCatalogApplication
 ```
 
 Windows'ta classpath ayıracı olarak `:` yerine `;` kullanın. Eşleşen DLL yolunu verin.
-Eşleşen yayımlanmış bağımlılıkları ve REST `4.8.0` / cache `0.9.0` paketlerinde
+Eşleşen yayımlanmış bağımlılıkları ve REST `4.8.2` / cache `0.9.2` paketlerinde
 bulunan `edge-cache` desteğini içeren native dosyayı kullanın. Bu desteği içermeyen
 başka bir native dosyaya property ile özellik eklenmez. Native destek eksikse başlangıç
 hata verir; farklı bir politika sessizce devreye alınmaz.

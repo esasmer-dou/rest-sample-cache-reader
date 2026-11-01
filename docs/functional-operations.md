@@ -2,8 +2,8 @@
 
 [English](functional-operations.md) | [Turkish](functional-operations.tr.md)
 
-These examples belong to released sample `0.8.0`, cache `0.9.0` and REST/platform
-`4.8.0` (optional agent `0.7.1`). Use the aligned published packages and native files.
+These examples belong to released sample `0.8.2`, cache `0.9.2` and REST/platform
+`4.8.2` (optional agent `0.7.1`). Use the aligned published packages and native files.
 
 ## Feature And Run Map
 

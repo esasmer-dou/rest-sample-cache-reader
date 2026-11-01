@@ -6,7 +6,7 @@ Use this isolated source example when an existing Redis key already contains the
 JSON you want to return. Java selects the key and response. Rust reads Redis and
 holds the payload until the managed HTTP writer finishes. No payload `byte[]`
 is created in Java on the FFM path. This is not the default versioned reader.
-Build this checkout's profile; its unchanged 0.8.0 POM version is not evidence
+Build this checkout's profile; its POM version is not evidence
 that these additions were shipped in an earlier sample release.
 
 Slab means fixed-size native storage. A lease is temporary ownership of one slot.
@@ -17,12 +17,12 @@ bridge; FFM is Java's optional foreign-function API. OpenJ9 uses the JNI slab pa
 
 Run from this sample directory, with JDK 21, Maven 3.9+,
 curl, redis-cli, a disposable Redis at 127.0.0.1:6379 and port 8080 free.
-Resolve the published 4.8.0 `rust-java-ffm-fast`/`rust-java-ffm-cache` modules
+Resolve the published 4.8.2 `rust-java-ffm-fast`/`rust-java-ffm-cache` modules
 with authenticated Maven access. Their publication does not imply that an
 arbitrary packaged native library has slab/FFM capabilities. Use a matching
 qualified native file; if its required capability is absent, build that feature
 from the matching source revision. See [selection/read costs](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.md).
-The published `4.8.0` native package already includes `shared-slab` for OpenJ9 JNI,
+The published `4.8.2` native package already includes `shared-slab` for OpenJ9 JNI,
 retaining the normal panic-abort engine; this path does not require a native rebuild.
 Only HotSpot FFM needs a qualified build with `--profile release-ffm --features ffm-fast`.
 Abort-profile FFM capabilities are zero; it must never activate the foreign API.
@@ -44,7 +44,7 @@ redis-cli SET phase54:catalog:heavy '{"description":"Warehouse stock","stock":42
 SAMPLE_REDIS_HOST=127.0.0.1 SAMPLE_REDIS_PORT=6379 \
 SAMPLE_SLAB_ENABLED=true SAMPLE_SLAB_REQUIRED=true \
 java -Drust.lib.path=/app/native/librust_hyper.so \
-  -cp 'target-shared-slab/rest-sample-cache-reader-0.8.0.jar:target-shared-slab/lib/*' \
+  -cp 'target-shared-slab/rest-sample-cache-reader-0.8.2.jar:target-shared-slab/lib/*' \
   com.reactor.sample.slab.SlabApplication
 ```
 

@@ -47,7 +47,7 @@ On Linux, start the inventory service in one terminal:
 java -Xms8m -Xmx48m -Xss256k \
   -Dserver.port=8082 -Dsample.api.enabled=false \
   -Dsample.inventory.enabled=true \
-  -cp 'target-trace-propagation/rest-sample-cache-reader-0.8.0.jar:target-trace-propagation/lib/*' \
+  -cp 'target-trace-propagation/rest-sample-cache-reader-0.8.2.jar:target-trace-propagation/lib/*' \
   com.reactor.sample.trace.TraceApplication
 ```
 
@@ -57,7 +57,7 @@ Start the order API in another terminal:
 java -Xms8m -Xmx48m -Xss256k \
   -Dserver.port=8080 -Dsample.inventory.base-url=http://127.0.0.1:8082 \
   -Dsample.diagnostics.enabled=true -Dreactor.tracing.sample-ratio=1.0 \
-  -cp 'target-trace-propagation/rest-sample-cache-reader-0.8.0.jar:target-trace-propagation/lib/*' \
+  -cp 'target-trace-propagation/rest-sample-cache-reader-0.8.2.jar:target-trace-propagation/lib/*' \
   com.reactor.sample.trace.TraceApplication
 ```
 

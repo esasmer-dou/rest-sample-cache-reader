@@ -1,24 +1,16 @@
 # rest-sample-cache-reader
 
-## 0.8.1 Sürümü
+## 0.8.2 Sürümü
 
-Yayımlanmış sample 0.8.1, REST/platform 4.8.1, cache 0.9.1 ve model 0.5.1 kullanır. ARM manifesti
-düzeltmesini içerir. İş kodu ve native ABI'ler değişmez.
-Önceki 0.8.0 sürüm notları tarihsel kayıttır.
-[Düzeltme notları](docs/RELEASE_NOTES_v0.8.1.tr.md).
+Sample `0.8.2`, REST/platform `4.8.2`, cache `0.9.2` ve model `0.5.2` kullanır.
+Java iş kodu ve native ABI'ler değişmez. Eşleşen bağımlılıkları birlikte güncelleyin.
+[Geçiş ve kullanım notları](docs/RELEASE_NOTES_v0.8.2.tr.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
 
 ## Compose
 
-**Henüz yayımlanmamış kaynak akışı.** Bu topoloji ve aşağıdaki yeni yardımcı API
-örnekleri birlikte güncellenmiş kaynakları gerektirir; yayımlanmış sample `0.8.1`
-tek başına yeterli değildir. Uyumlu REST/platform, cache ve Dubbo kaynak bağımlılıkları
-önceden kurulmuş veya çözülebilir olmalıdır. `--prepare` / `-Prepare` sample'ları
-paketler; bu framework bağımlılıklarını derlemez. Yeni JNI export'ları için eşleşen
-REST native kaynakları da gerekir; mevcut ABI numaraları değişmez. Kubernetes
-doğrulaması Compose motorunun çalıştırıldığına kanıt değildir; bu tarif ARM
-donanımının doğrulandığı anlamına da gelmez.
+Bu örnek 0.8.2 sürümünde REST/platform 4.8.2 ve ilgili cache veya Dubbo 0.9.2 paketiyle çalışır. Aşağıdaki Compose komutları yerel geliştirme içindir. Yayın doğrulaması EmaTech üzerinde yapılır; Windows ve ARM çalıştırma kontrolleri ayrı uyumluluk testleridir. Bir platformun derlenmiş olması, o platformda yük testi yapıldığı anlamına gelmez.
 
 Ortak [Compose topolojisi](docker/compose/docker-compose.yml); şema/seed içeren
 PostgreSQL, Redis 7, writer, reader, provider ve consumer başlatır. Dört
@@ -73,11 +65,11 @@ değildir. Geliştirme kimlik bilgileri ve tek DB/Redis kullanır; HA production
 kurulumu değildir. Limitler ve smoke assertion'ları runtime kanıtı, sürekli yük/p99
 sonucu veya kapasite garantisi sayılmaz. Seçilen profil, veri ve warmup ayrı ölçülmelidir.
 
-## 0.8.1 İle Başlayın
+## 0.8.2 İle Başlayın
 
 Gerçek projection okuma akışı, isteğe bağlı sürümlü L1 ve sahipliği izlenen JSON yanıtlarını destekler. Ayrı profiller public edge, native view, JWT, izleme, ortak tampon ve dış HTTP çağrısını gösterir. Varsayılan uygulama yalnız Redis'ten okur.
 
-[Kullanım rehberi](docs/functional-operations.tr.md) · [Sürüm notları](docs/RELEASE_NOTES_v0.8.1.tr.md)
+[Kullanım rehberi](docs/functional-operations.tr.md) · [Sürüm notları](docs/RELEASE_NOTES_v0.8.2.tr.md)
 
 
 Özellik, çalıştırma ve hata eşleştirmesi: [Kullanım örnekleri](docs/functional-operations.tr.md).
@@ -106,7 +98,7 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.8.1`, `java-rust-cache:0.9.1`, `rust-sample-model:0.5.1`.
+Kullanılan sürümler: `rust-java-rest:4.8.2`, `java-rust-cache:0.9.2`, `rust-sample-model:0.5.2`.
 
 ## Önce Bu Bölümü Okuyun
 
@@ -130,13 +122,13 @@ yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
 
 ## Güncel Kaynak Ayarları
 
-Bu güncelleme, platformu REST `4.8.1` ve isteğe bağlı agent `0.7.1` ile eşler.
+Bu güncelleme, platformu REST `4.8.2` ve isteğe bağlı agent `0.7.1` ile eşler.
 Seçtiğiniz bağımlılığın native dosyasını kullanın. Eski SO/DLL dosyalarını karıştırmayın.
 İş kodu, URL'ler ve ayar anahtarları değişmez. Telemetri varsayılan olarak kapalıdır.
 HTTP micro bellek testi, veritabanı işinde veya daha ayrıntılı profilde aynı maliyeti garanti etmez.
 
-`0.8.1` sürümü platform parent `4.8.1` kullanır. Uygulamayı hizalanmış bağımlılıklarla
-yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.8.1.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
+`0.8.2` sürümü platform parent `4.8.2` kullanır. Uygulamayı hizalanmış bağımlılıklarla
+yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.8.2.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
 
 - `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
 - `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
@@ -144,7 +136,7 @@ yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.8.1.tr.md) okuyun.
 - Redis key'leri, projection namespace'leri, REST adresleri ve read-only davranış değişmedi.
 - REST, ABI `29/7/6/6` hattını kullanır. Cache paketi kendi Redis ABI `6` sözleşmesini doğrular.
 
-İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.8.1` çalışma katmanıyla kullanılabilir.
+İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.8.2` çalışma katmanıyla kullanılabilir.
 Varsayılan olarak kapalıdır. Yalnız bu servis mevcut Glowroot Central kurulumuna sınırlandırılmış HTTP
 ve native Redis süreleri gönderecekse açın. Handler veya projection kodu değişmez.
 
@@ -287,9 +279,9 @@ Reader ve writer namespace değerleri aynı olmalıdır. Writer `crm.customer.ca
 
 ## İsteğe Bağlı L1 Okuma
 
-Sample `0.8.0`, yayımlanmış cache `0.9.0` L1 okuyucusunu REST/platform `4.8.0` ile kullanır.
-Hizalanmış paketleri ve pakete ait native dosyayı kullanın. Kardeş kütüphaneleri
-kaynaktan derlemek ön koşul değildir. L1 isteğe bağlı kalır.
+L1 ilk kez sample `0.8.0`, cache `0.9.0` ve REST/platform `4.8.0` ile sunuldu.
+Bu `0.8.2` kaynak kodu için cache `0.9.2`, REST/platform `4.8.2` ve pakete ait native
+dosyayı kullanın. Bağımlılık erişimi aşağıda açıklanır; L1 isteğe bağlı kalır.
 
 Aynı müşteri veya segment sık isteniyorsa L1 kullanabilirsiniz. Sürümlü verinin kaynağı
 yine Redis'tir. L1'de bulunan JSON için Redis'ten tekrar veri alınmaz. Java handler,
@@ -309,7 +301,7 @@ public interface CustomerCacheService {
 }
 ```
 
-Henüz yayımlanmamış güncel ID ve segment handler'ları `CacheReadValue` sonucunu
+`0.8.2` ID ve segment handler'ları `CacheReadValue` sonucunu
 `CacheResponses.reply(value, missCode, notReadyCode, COMMON_ERRORS)` ile döndürür.
 Açık boolean, `sample.errors.common-contract=false` (eski JSON) veya `true`
 (problem details) seçimini korur. Üç argümanlı yardımcının başlangıç politikası olan
@@ -320,6 +312,18 @@ L1 kapalıysa Redis'ten gelen byte dizisi doğrudan raw yanıta aktarılır. Sna
 sarmalayıcısı oluşturulmaz. L1 açıksa value, sahipliği kontrollü snapshot taşır.
 Yanıt yazıcısı, yazma veya iptal sonrasında pin'i bırakır. Yardımcı metoda devrettikten
 sonra handler'da kapatmayın. Mevcut result ve snapshot API'leri de korunur.
+
+Mevcut [CustomerCacheHandler](src/main/java/com/reactor/sample/cache/reader/handler/CustomerCacheHandler.java)
+bu adaptörü kullanır; `COMMON_ERRORS`, başlangıçta seçilen hata sözleşmesi bayrağıdır:
+
+```java
+private static ResponseEntity<?> valueResponse(CacheReadValue value, String missCode) {
+    return CacheResponses.reply(value, missCode, "customer_cache_not_ready", COMMON_ERRORS);
+}
+```
+
+Diğer projection rotaları aynı yardımcının `CacheReadResult` overload'unu kullanır;
+yeni endpoint veya yanıt biçimi gerekmez.
 
 Normal başlangıçta yalnız Redis okuyucusu kullanılır. Detail ve segment için L1'i açın:
 
@@ -429,7 +433,7 @@ Bu uygulama Rust-Java REST üzerinde çalışır. Ayrı bir Spring starter veya 
 gerekmez. Telemetri varsayılan olarak kapalıdır. Açıldığında HTTP route ve native Redis read süreleri
 aynı Rust çalışma katmanında toplanır. Handler ve projection kodu değişmez.
 
-Bu sample, Glowroot ABI `6` taşıyan platform `4.8.1` sürümünü kullanır. İsteğe bağlı
+Bu sample, Glowroot ABI `6` taşıyan platform `4.8.2` sürümünü kullanır. İsteğe bağlı
 `java-rust-glowroot-agent:0.7.1` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
 gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 
@@ -437,7 +441,7 @@ gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.8.1</version>
+  <version>4.8.2</version>
   <relativePath/>
 </parent>
 ```

@@ -1,6 +1,6 @@
 # rest-sample-cache-reader Kullanıcı Rehberi
 
-Bu rehber sample `0.8.0` / cache `0.9.0` ile ilk kullanım içindir.
+Bu rehber sample `0.8.2` / cache `0.9.2` ile ilk kullanım içindir.
 İsteğe bağlı özellikler ve hata sözleşmeleri için [güncel kullanım tablosuna](functional-operations.tr.md) bakın.
 
 Amaç kısa ve nettir: Redis içinde hazır duran JSON verisini REST API olarak döndürmek.

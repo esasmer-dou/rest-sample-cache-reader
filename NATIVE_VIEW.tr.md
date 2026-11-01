@@ -2,7 +2,7 @@
 
 [English](NATIVE_VIEW.md) | [Turkish](NATIVE_VIEW.tr.md)
 
-Bu ayrı kaynak profili yayımlanmış REST/codegen `4.8.0` API'lerini kullanır.
+Bu ayrı kaynak profili yayımlanmış REST/codegen `4.8.2` API'lerini kullanır.
 Sample framework JAR'ına dahil değildir. Varsayılan Redis okuyucusu değişmez.
 [Özellik seçimi/okuma maliyeti](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.tr.md).
 Bu profil güncel checkout'u anlatır; önceki sample 0.8.0 JAR'ında bulunduğu iddia
@@ -37,8 +37,8 @@ endpoint'leri eklenmez. Ortak modeldeki sade record, serializer'ı otomatik kayd
 
 ## Örneği Çalıştırın
 
-Java 21, Maven 3.9+, boş 8080 portu ve REST/platform 4.8.0,
-model 0.5.0 paketlerine GitHub Packages erişimi gerekir. Sample dizininde seçili
+Java 21, Maven 3.9+, boş 8080 portu ve REST/platform 4.8.2,
+model 0.5.2 paketlerine GitHub Packages erişimi gerekir. Sample dizininde seçili
 profili derleyin. Framework/model kaynağını değiştirdiyseniz önce
 eşleşen paketleri install edin; yayımlanmış paket için kaynak install gerekmez.
 
@@ -57,7 +57,7 @@ mvn -Pnative-view exec:java
 İkinci PowerShell terminalinde istek hazırlayın:
 
 ```powershell
-$cp = 'target-native-view/rest-sample-cache-reader-0.8.0.jar;target-native-view/lib/*'
+$cp = 'target-native-view/rest-sample-cache-reader-0.8.2.jar;target-native-view/lib/*'
 java -cp $cp com.reactor.sample.nativeview.AccountPayloadTool account.bin 'İstanbul'
 curl.exe -H 'Content-Type: application/octet-stream' --data-binary '@account.bin' http://localhost:8080/api/v1/accounts/view
 curl.exe -H 'Content-Type: application/octet-stream' --data-binary '@account.bin' http://localhost:8080/api/v1/accounts/dto

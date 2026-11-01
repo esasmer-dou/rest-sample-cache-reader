@@ -5,8 +5,8 @@
 Use this example for the same anonymous product JSON shared by every visitor.
 Keep customer, tenant and authorization-dependent data in the normal sample.
 Build the `public-edge` sample application from this checkout; it is not in the
-default published `0.8.0` reader JAR. The matching published REST `4.8.0` and cache
-`0.9.0` native packages already include `edge-cache` support. Sample application
+default published `0.8.0` reader JAR. The matching published REST `4.8.2` and cache
+`0.9.2` native packages already include `edge-cache` support. Sample application
 availability and native feature availability are separate.
 
 ## Choose the Path
@@ -38,13 +38,13 @@ mvn -B -ntp clean package dependency:copy-dependencies -Ppublic-edge \
 java -Drust.lib.path=/app/native/librust_hyper.so \
   -Dreactor.cache.redis.host=redis \
   -Dsample.public.edge.enabled=true \
-  -cp 'target-public-edge/rest-sample-cache-reader-0.8.0.jar:target-public-edge/dependency/*' \
+  -cp 'target-public-edge/rest-sample-cache-reader-0.8.2.jar:target-public-edge/dependency/*' \
   com.reactor.sample.cache.publiccatalog.PublicCatalogApplication
 ```
 
 On Windows, use `;` instead of `:` in the classpath and supply the matching DLL.
 Use matching published dependencies and a native artifact containing `edge-cache`,
-as included in the REST `4.8.0` / cache `0.9.0` packages. A property cannot add
+as included in the REST `4.8.2` / cache `0.9.2` packages. A property cannot add
 support to a different native file that lacks it. Missing native support fails
 startup instead of silently installing a different policy.
 

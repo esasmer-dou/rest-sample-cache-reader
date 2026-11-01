@@ -4,7 +4,7 @@
 
 Build this optional sample profile from the source checkout; its application is
 not in the default published `0.8.0` reader JAR. It uses generated HTTP clients,
-a circuit breaker and a native HS256 filter. The published `4.8.0` native package
+a circuit breaker and a native HS256 filter. The published `4.8.2` native package
 already includes `outbound-http` and `edge-jwt`; no native rebuild is needed just
 to include those features. The normal Redis reader is unchanged. Do not combine
 the `outbound`, `native-view` and default application builds.
@@ -26,7 +26,7 @@ HTTP/2. A native HTTPS URL fails at startup; it is never silently downgraded.
 
 ## Build With Matching Dependencies
 
-Resolve the matching published `4.8.0` core, platform and starters with Maven,
+Resolve the matching published `4.8.2` core, platform and starters with Maven,
 then build this sample profile. Use their matching native library, which already
 contains `outbound-http,edge-jwt`. A custom native build is only needed if you
 deliberately select an artifact without the required features.

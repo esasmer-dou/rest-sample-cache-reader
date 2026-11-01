@@ -1,23 +1,16 @@
 # rest-sample-cache-reader
 
-## Version 0.8.1
+## Version 0.8.2
 
-Published sample 0.8.1 uses REST/platform 4.8.1, cache 0.9.1 and model 0.5.1. It includes
-the ARM provenance packaging fix without changing business logic or native ABIs.
-Use the aligned 0.8.1 artifacts; earlier 0.8.0 release notes remain historical.
-[Patch notes](docs/RELEASE_NOTES_v0.8.1.md).
+Sample `0.8.2` uses REST/platform `4.8.2`, cache `0.9.2` and model `0.5.2`.
+Java business code and native ABIs are unchanged. Upgrade the aligned dependencies together.
+[Upgrade and usage notes](docs/RELEASE_NOTES_v0.8.2.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
 
 ## Compose
 
-**Unpublished source workflow.** This topology and the new helper-based examples
-below require coordinated checkout changes, not the published sample `0.8.1` alone.
-Matching REST/platform, cache and Dubbo source dependencies must already be installed
-or resolvable. `--prepare` / `-Prepare` packages the samples; it does not build those
-framework dependencies. New JNI exports also need matching REST native resources;
-existing ABI numbers are unchanged. Kubernetes validation is not Compose-engine
-execution proof, and this recipe does not establish ARM hardware qualification.
+This 0.8.2 sample uses REST/platform 4.8.2 and the relevant cache or Dubbo 0.9.2 package. The Compose commands below are for local development. Release qualification runs on EmaTech; Windows and ARM execution checks are separate compatibility tests. A compiled platform artifact does not imply load-test qualification on that platform.
 
 The shared [Compose topology](docker/compose/docker-compose.yml) starts PostgreSQL
 with schema/seed, Redis 7, writer, reader, provider and consumer. Clone all four
@@ -69,11 +62,11 @@ credentials and single DB/Redis instances, not an HA production deployment. Limi
 and smoke assertions are not runtime proof, a sustained-load/p99 result or a capacity
 guarantee; measure the selected profile, dataset and warmup separately.
 
-## Start With 0.8.1
+## Start With 0.8.2
 
 The real projection read flow supports optional versioned L1 and owned JSON bodies. Separate profiles demonstrate public edge policies, native views, JWT, tracing, shared slabs and outbound HTTP. The default remains a Redis-only read service.
 
-[Usage guide](docs/functional-operations.md) · [Release notes](docs/RELEASE_NOTES_v0.8.1.md)
+[Usage guide](docs/functional-operations.md) · [Release notes](docs/RELEASE_NOTES_v0.8.2.md)
 
 
 Feature, run and error map: [Usage examples](docs/functional-operations.md).
@@ -102,7 +95,7 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.8.1`, `java-rust-cache:0.9.1`, `rust-sample-model:0.5.1`.
+Current versions: `rust-java-rest:4.8.2`, `java-rust-cache:0.9.2`, `rust-sample-model:0.5.2`.
 
 ## Read This First
 
@@ -126,13 +119,13 @@ compiler path; they are not packaged as runtime classes.
 
 ## Current Checkout
 
-This update aligns the platform with REST `4.8.1` and optional agent `0.7.1`.
+This update aligns the platform with REST `4.8.2` and optional agent `0.7.1`.
 Use the native file packaged with the dependency you selected. Do not mix older SO/DLL files.
 Business code, URLs and configuration keys stay the same. Telemetry remains disabled by default.
 The HTTP micro memory gate does not guarantee the same overhead for a database job or a richer profile.
 
-Version `0.8.1` uses platform parent `4.8.1`. Rebuild the application with the aligned
-dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.1.md). Runtime settings and URLs are unchanged.
+Version `0.8.2` uses platform parent `4.8.2`. Rebuild the application with the aligned
+dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.2.md). Runtime settings and URLs are unchanged.
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
@@ -140,7 +133,7 @@ dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.1.md). Runtime setting
 - Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
 - REST uses the `29/7/6/6` ABI line. The cache package verifies its own Redis ABI `6` contract.
 
-The optional Glowroot micro telemetry plane is available through the aligned REST `4.8.1` runtime.
+The optional Glowroot micro telemetry plane is available through the aligned REST `4.8.2` runtime.
 It is disabled by default. Enable it only when this service must send bounded HTTP and native Redis
 timings to an existing Glowroot Central deployment. No handler or projection code changes.
 
@@ -283,9 +276,9 @@ Reader and writer namespaces must match. If the writer publishes `crm.customer.c
 
 ## Optional L1 Reads
 
-Sample `0.8.0` uses the released cache `0.9.0` L1 reader with REST/platform `4.8.0`.
-Use the aligned published dependencies and their packaged native library; sibling
-library source builds are not a prerequisite. L1 remains opt-in.
+L1 was first introduced in sample `0.8.0` with cache `0.9.0` and REST/platform `4.8.0`.
+For this `0.8.2` checkout, use cache `0.9.2`, REST/platform `4.8.2` and their packaged
+native library. Dependency access is described below; L1 remains opt-in.
 
 Use L1 when the same customer or segment is requested often. Redis remains the source
 of the versioned snapshot. A hit avoids fetching the JSON from Redis again. Java
@@ -305,7 +298,7 @@ public interface CustomerCacheService {
 }
 ```
 
-The current, unpublished ID and segment handlers pass `CacheReadValue` to
+The `0.8.2` ID and segment handlers pass `CacheReadValue` to
 `CacheResponses.reply(value, missCode, notReadyCode, COMMON_ERRORS)`. The explicit
 boolean preserves `sample.errors.common-contract=false` (legacy JSON) or `true`
 (problem details). It overrides the helper's three-argument startup policy
@@ -315,6 +308,18 @@ With L1 disabled, this forwards the Redis byte array as a raw response. No snaps
 wrapper is created. With L1 enabled, the value carries an owned snapshot.
 The response writer releases its pin after writing or cancellation. Do not close it
 after handing it to the response helper. Existing result/snapshot APIs still work.
+
+The existing [CustomerCacheHandler](src/main/java/com/reactor/sample/cache/reader/handler/CustomerCacheHandler.java)
+uses this adapter; `COMMON_ERRORS` is its startup-selected error-contract flag:
+
+```java
+private static ResponseEntity<?> valueResponse(CacheReadValue value, String missCode) {
+    return CacheResponses.reply(value, missCode, "customer_cache_not_ready", COMMON_ERRORS);
+}
+```
+
+The other projection routes use the same helper's `CacheReadResult` overload;
+no new endpoint or response format is required.
 
 The normal startup still uses Redis-only readers. To enable L1 for detail and segment:
 
@@ -421,7 +426,7 @@ This application runs on Rust-Java REST. It does not need a Spring starter or a 
 runtime dependency. Telemetry is disabled by default. When enabled, HTTP routes and native Redis
 read timings are collected inside the same Rust runtime. Handler and projection code do not change.
 
-This sample already uses the platform `4.8.1` with Glowroot ABI `6`. The optional
+This sample already uses the platform `4.8.2` with Glowroot ABI `6`. The optional
 `java-rust-glowroot-agent:0.7.1` JAR is needed only when you want `-javaagent` syntax; the embedded
 REST telemetry runtime does not require a separate agent dependency:
 
@@ -429,7 +434,7 @@ REST telemetry runtime does not require a separate agent dependency:
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.8.1</version>
+  <version>4.8.2</version>
   <relativePath/>
 </parent>
 ```

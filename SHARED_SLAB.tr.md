@@ -6,7 +6,7 @@ Redis anahtarında döndürmek istediğiniz JSON zaten hazırsa bu ayrı örneğ
 Anahtarı ve yanıtı Java seçer. Rust, Redis'i okur ve HTTP yazımı bitene kadar
 veriyi tutar. FFM yolunda Java payload `byte[]` dizisi oluşmaz. Bu örnek,
 varsayılan sürümlü okuyucunun yerine geçmez.
-Bu checkout'un profilini derleyin; POM'un 0.8.0 kalması bu eklemelerin önceki
+Bu checkout'un profilini derleyin; POM sürümü bu eklemelerin önceki
 sample yayımında bulunduğunun kanıtı değildir.
 
 Slab, sabit boyutlu native bellek alanıdır. Lease, bir slotun geçici sahipliğidir.
@@ -17,12 +17,12 @@ FFM ise Java'nın isteğe bağlı foreign-function API'sidir. OpenJ9, JNI slab k
 
 Bu sample dizininden çalıştırın. JDK 21, Maven 3.9+,
 curl, redis-cli, 127.0.0.1:6379 üzerinde geçici Redis ve boş 8080 portu gerekir.
-Yayımlanmış 4.8.0 `rust-java-ffm-fast`/`rust-java-ffm-cache` modüllerini Maven
+Yayımlanmış 4.8.2 `rust-java-ffm-fast`/`rust-java-ffm-cache` modüllerini Maven
 erişimiyle çözümleyin. Yayım her native binary'nin slab/FFM yeteneği taşıdığı
 anlamına gelmez. Eşleşen, kabul edilmiş native dosyayı kullanın; yetenek yoksa
 eşleşen kaynak revision'dan ilgili feature'ı derleyin.
 [Özellik seçimi/okuma maliyeti](https://github.com/esasmer-dou/rust-java-rest/blob/master/docs/feature-examples.tr.md).
-Yayımlanmış `4.8.0` native paketi, OpenJ9 JNI için zaten `shared-slab` içerir;
+Yayımlanmış `4.8.2` native paketi, OpenJ9 JNI için zaten `shared-slab` içerir;
 normal panic-abort motoru korunur ve bu yol için native derleme gerekmez.
 Yalnız HotSpot FFM için kabul edilmiş bir native derlemede
 `--profile release-ffm --features ffm-fast` gerekir. Abort profilinde FFM yeteneği
@@ -44,7 +44,7 @@ redis-cli SET phase54:catalog:heavy '{"description":"Depo stoku","stock":42}'
 SAMPLE_REDIS_HOST=127.0.0.1 SAMPLE_REDIS_PORT=6379 \
 SAMPLE_SLAB_ENABLED=true SAMPLE_SLAB_REQUIRED=true \
 java -Drust.lib.path=/app/native/librust_hyper.so \
-  -cp 'target-shared-slab/rest-sample-cache-reader-0.8.0.jar:target-shared-slab/lib/*' \
+  -cp 'target-shared-slab/rest-sample-cache-reader-0.8.2.jar:target-shared-slab/lib/*' \
   com.reactor.sample.slab.SlabApplication
 ```
 

@@ -2,7 +2,7 @@
 
 [English](JWT_SECURITY.md) | [Turkish](JWT_SECURITY.tr.md)
 
-Bu ayrı sample profili yayımlanmış REST/security 4.8.0 paketlerini kullanır.
+Bu ayrı sample profili yayımlanmış REST/security 4.8.2 paketlerini kullanır.
 Sample kaynakları bu depodadır; framework JAR'ına dahil değildir. Varsayılan Redis
 profili dışındaki eklemeler bu checkout'u anlatır; yayımlanmış sample 0.8.0 JAR'ında
 bulundukları iddia edilmez. Aşağıdaki seçili profili kaynaklardan derleyin. Normal
@@ -25,7 +25,7 @@ Ağdan anahtar arama, yeni executor veya yenileme thread'i başlatılmaz.
 
 Aşağıdaki komutları güncel checkout'ta Bash ile `rest-sample-cache-reader`
 dizininde çalıştırın. Tam JDK 21 (`jdk.crypto.ec` dahil), Maven 3.9+, curl, boş
-8080 portu ve hizalı REST/platform 4.8.0 paketlerine Maven erişimi gerekir.
+8080 portu ve hizalı REST/platform 4.8.2 paketlerine Maven erişimi gerekir.
 Framework kaynağı değiştiyse eşleşen paketleri önce install edin;
 yayımlanmış paketleri kullanmak için kaynak derlemesi zorunlu değildir.
 
@@ -60,7 +60,7 @@ JWT_WORK=$(mktemp -d)
 java "$JWT_TOOL" keys "$JWT_WORK/issuer"
 java "-Dsample.jwt.public-key-directory=$JWT_WORK/issuer/public" \
   -Dsample.jwt.cache.enabled=true \
-  -cp 'target-jwt-security/rest-sample-cache-reader-0.8.0.jar:target-jwt-security/lib/*' \
+  -cp 'target-jwt-security/rest-sample-cache-reader-0.8.2.jar:target-jwt-security/lib/*' \
   com.reactor.sample.jwt.JwtApplication >"$JWT_WORK/server.log" 2>&1 &
 JWT_PID=$!
 trap 'kill "$JWT_PID" 2>/dev/null || true' EXIT
