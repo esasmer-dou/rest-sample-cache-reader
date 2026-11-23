@@ -1,16 +1,16 @@
 # rest-sample-cache-reader
 
-## 0.8.2 Sürümü
+## 0.8.3 Sürümü
 
-Sample `0.8.2`, REST/platform `4.8.2`, cache `0.9.2` ve model `0.5.2` kullanır.
+Sample `0.8.3`, REST/platform `4.9.0`, cache `0.9.2` ve model `0.5.3` kullanır.
 Java iş kodu ve native ABI'ler değişmez. Eşleşen bağımlılıkları birlikte güncelleyin.
-[Geçiş ve kullanım notları](docs/RELEASE_NOTES_v0.8.2.tr.md).
+[Geçiş ve kullanım notları](docs/RELEASE_NOTES_v0.8.3.tr.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
 
 ## Compose
 
-Bu örnek 0.8.2 sürümünde REST/platform 4.8.2 ve ilgili cache veya Dubbo 0.9.2 paketiyle çalışır. Aşağıdaki Compose komutları yerel geliştirme içindir. Yayın doğrulaması EmaTech üzerinde yapılır; Windows ve ARM çalıştırma kontrolleri ayrı uyumluluk testleridir. Bir platformun derlenmiş olması, o platformda yük testi yapıldığı anlamına gelmez.
+Bu örnek 0.8.3 sürümünde REST/platform 4.9.0 ve ilgili cache veya Dubbo 0.9.2 paketiyle çalışır. Aşağıdaki Compose komutları yerel geliştirme içindir. Yayın doğrulaması EmaTech üzerinde yapılır; Windows ve ARM çalıştırma kontrolleri ayrı uyumluluk testleridir. Bir platformun derlenmiş olması, o platformda yük testi yapıldığı anlamına gelmez.
 
 Ortak [Compose topolojisi](docker/compose/docker-compose.yml); şema/seed içeren
 PostgreSQL, Redis 7, writer, reader, provider ve consumer başlatır. Dört
@@ -65,11 +65,11 @@ değildir. Geliştirme kimlik bilgileri ve tek DB/Redis kullanır; HA production
 kurulumu değildir. Limitler ve smoke assertion'ları runtime kanıtı, sürekli yük/p99
 sonucu veya kapasite garantisi sayılmaz. Seçilen profil, veri ve warmup ayrı ölçülmelidir.
 
-## 0.8.2 İle Başlayın
+## 0.8.3 İle Başlayın
 
 Gerçek projection okuma akışı, isteğe bağlı sürümlü L1 ve sahipliği izlenen JSON yanıtlarını destekler. Ayrı profiller public edge, native view, JWT, izleme, ortak tampon ve dış HTTP çağrısını gösterir. Varsayılan uygulama yalnız Redis'ten okur.
 
-[Kullanım rehberi](docs/functional-operations.tr.md) · [Sürüm notları](docs/RELEASE_NOTES_v0.8.2.tr.md)
+[Kullanım rehberi](docs/functional-operations.tr.md) · [Sürüm notları](docs/RELEASE_NOTES_v0.8.3.tr.md)
 
 
 Özellik, çalıştırma ve hata eşleştirmesi: [Kullanım örnekleri](docs/functional-operations.tr.md).
@@ -98,7 +98,7 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.8.2`, `java-rust-cache:0.9.2`, `rust-sample-model:0.5.2`.
+Kullanılan sürümler: `rust-java-rest:4.9.0`, `java-rust-cache:0.9.2`, `rust-sample-model:0.5.3`.
 
 ## Önce Bu Bölümü Okuyun
 
@@ -122,13 +122,13 @@ yalnız derleyici yolunda kalır. Runtime sınıfı olarak pakete girmez.
 
 ## Güncel Kaynak Ayarları
 
-Bu güncelleme, platformu REST `4.8.2` ve isteğe bağlı agent `0.7.1` ile eşler.
+Bu güncelleme, platformu REST `4.9.0` ve isteğe bağlı agent `0.7.1` ile eşler.
 Seçtiğiniz bağımlılığın native dosyasını kullanın. Eski SO/DLL dosyalarını karıştırmayın.
 İş kodu, URL'ler ve ayar anahtarları değişmez. Telemetri varsayılan olarak kapalıdır.
 HTTP micro bellek testi, veritabanı işinde veya daha ayrıntılı profilde aynı maliyeti garanti etmez.
 
-`0.8.2` sürümü platform parent `4.8.2` kullanır. Uygulamayı hizalanmış bağımlılıklarla
-yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.8.2.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
+`0.8.3` sürümü platform parent `4.9.0` kullanır. Uygulamayı hizalanmış bağımlılıklarla
+yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.8.3.tr.md) okuyun. Runtime ayarları ve adresler değişmez.
 
 - `@EnableRustCache` tek bir managed native cache lifecycle oluşturur.
 - `@GenerateProjectionReader`, customer read implementasyonunu build sırasında üretir.
@@ -136,7 +136,7 @@ yeniden derleyin. [Sürüm notlarını](docs/RELEASE_NOTES_v0.8.2.tr.md) okuyun.
 - Redis key'leri, projection namespace'leri, REST adresleri ve read-only davranış değişmedi.
 - REST, ABI `29/7/6/6` hattını kullanır. Cache paketi kendi Redis ABI `6` sözleşmesini doğrular.
 
-İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.8.2` çalışma katmanıyla kullanılabilir.
+İsteğe bağlı Glowroot mikro telemetri katmanı, uyumlu REST `4.9.0` çalışma katmanıyla kullanılabilir.
 Varsayılan olarak kapalıdır. Yalnız bu servis mevcut Glowroot Central kurulumuna sınırlandırılmış HTTP
 ve native Redis süreleri gönderecekse açın. Handler veya projection kodu değişmez.
 
@@ -280,7 +280,7 @@ Reader ve writer namespace değerleri aynı olmalıdır. Writer `crm.customer.ca
 ## İsteğe Bağlı L1 Okuma
 
 L1 ilk kez sample `0.8.0`, cache `0.9.0` ve REST/platform `4.8.0` ile sunuldu.
-Bu `0.8.2` kaynak kodu için cache `0.9.2`, REST/platform `4.8.2` ve pakete ait native
+Bu `0.8.3` kaynak kodu için cache `0.9.2`, REST/platform `4.9.0` ve pakete ait native
 dosyayı kullanın. Bağımlılık erişimi aşağıda açıklanır; L1 isteğe bağlı kalır.
 
 Aynı müşteri veya segment sık isteniyorsa L1 kullanabilirsiniz. Sürümlü verinin kaynağı
@@ -301,7 +301,7 @@ public interface CustomerCacheService {
 }
 ```
 
-`0.8.2` ID ve segment handler'ları `CacheReadValue` sonucunu
+`0.8.3` ID ve segment handler'ları `CacheReadValue` sonucunu
 `CacheResponses.reply(value, missCode, notReadyCode, COMMON_ERRORS)` ile döndürür.
 Açık boolean, `sample.errors.common-contract=false` (eski JSON) veya `true`
 (problem details) seçimini korur. Üç argümanlı yardımcının başlangıç politikası olan
@@ -433,7 +433,7 @@ Bu uygulama Rust-Java REST üzerinde çalışır. Ayrı bir Spring starter veya 
 gerekmez. Telemetri varsayılan olarak kapalıdır. Açıldığında HTTP route ve native Redis read süreleri
 aynı Rust çalışma katmanında toplanır. Handler ve projection kodu değişmez.
 
-Bu sample, Glowroot ABI `6` taşıyan platform `4.8.2` sürümünü kullanır. İsteğe bağlı
+Bu sample, Glowroot ABI `6` taşıyan platform `4.9.0` sürümünü kullanır. İsteğe bağlı
 `java-rust-glowroot-agent:0.7.1` JAR'ı yalnız `-javaagent` biçimi gerekiyorsa eklenir. REST içine
 gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 
@@ -441,7 +441,7 @@ gömülü telemetri runtime'ı için ayrı agent dependency gerekmez:
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.8.2</version>
+  <version>4.9.0</version>
   <relativePath/>
 </parent>
 ```

@@ -1,16 +1,16 @@
 # rest-sample-cache-reader
 
-## Version 0.8.2
+## Version 0.8.3
 
-Sample `0.8.2` uses REST/platform `4.8.2`, cache `0.9.2` and model `0.5.2`.
+Sample `0.8.3` uses REST/platform `4.9.0`, cache `0.9.2` and model `0.5.3`.
 Java business code and native ABIs are unchanged. Upgrade the aligned dependencies together.
-[Upgrade and usage notes](docs/RELEASE_NOTES_v0.8.2.md).
+[Upgrade and usage notes](docs/RELEASE_NOTES_v0.8.3.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
 
 ## Compose
 
-This 0.8.2 sample uses REST/platform 4.8.2 and the relevant cache or Dubbo 0.9.2 package. The Compose commands below are for local development. Release qualification runs on EmaTech; Windows and ARM execution checks are separate compatibility tests. A compiled platform artifact does not imply load-test qualification on that platform.
+This 0.8.3 sample uses REST/platform 4.9.0 and the relevant cache or Dubbo 0.9.2 package. The Compose commands below are for local development. Release qualification runs on EmaTech; Windows and ARM execution checks are separate compatibility tests. A compiled platform artifact does not imply load-test qualification on that platform.
 
 The shared [Compose topology](docker/compose/docker-compose.yml) starts PostgreSQL
 with schema/seed, Redis 7, writer, reader, provider and consumer. Clone all four
@@ -62,11 +62,11 @@ credentials and single DB/Redis instances, not an HA production deployment. Limi
 and smoke assertions are not runtime proof, a sustained-load/p99 result or a capacity
 guarantee; measure the selected profile, dataset and warmup separately.
 
-## Start With 0.8.2
+## Start With 0.8.3
 
 The real projection read flow supports optional versioned L1 and owned JSON bodies. Separate profiles demonstrate public edge policies, native views, JWT, tracing, shared slabs and outbound HTTP. The default remains a Redis-only read service.
 
-[Usage guide](docs/functional-operations.md) · [Release notes](docs/RELEASE_NOTES_v0.8.2.md)
+[Usage guide](docs/functional-operations.md) · [Release notes](docs/RELEASE_NOTES_v0.8.3.md)
 
 
 Feature, run and error map: [Usage examples](docs/functional-operations.md).
@@ -95,7 +95,7 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.8.2`, `java-rust-cache:0.9.2`, `rust-sample-model:0.5.2`.
+Current versions: `rust-java-rest:4.9.0`, `java-rust-cache:0.9.2`, `rust-sample-model:0.5.3`.
 
 ## Read This First
 
@@ -119,13 +119,13 @@ compiler path; they are not packaged as runtime classes.
 
 ## Current Checkout
 
-This update aligns the platform with REST `4.8.2` and optional agent `0.7.1`.
+This update aligns the platform with REST `4.9.0` and optional agent `0.7.1`.
 Use the native file packaged with the dependency you selected. Do not mix older SO/DLL files.
 Business code, URLs and configuration keys stay the same. Telemetry remains disabled by default.
 The HTTP micro memory gate does not guarantee the same overhead for a database job or a richer profile.
 
-Version `0.8.2` uses platform parent `4.8.2`. Rebuild the application with the aligned
-dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.2.md). Runtime settings and URLs are unchanged.
+Version `0.8.3` uses platform parent `4.9.0`. Rebuild the application with the aligned
+dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.3.md). Runtime settings and URLs are unchanged.
 
 - `@EnableRustCache` creates one managed native cache lifecycle.
 - `@GenerateProjectionReader` generates the bound customer read implementation.
@@ -133,7 +133,7 @@ dependencies. See [release notes](docs/RELEASE_NOTES_v0.8.2.md). Runtime setting
 - Redis keys, projection namespaces, REST URLs, and read-only behavior are unchanged.
 - REST uses the `29/7/6/6` ABI line. The cache package verifies its own Redis ABI `6` contract.
 
-The optional Glowroot micro telemetry plane is available through the aligned REST `4.8.2` runtime.
+The optional Glowroot micro telemetry plane is available through the aligned REST `4.9.0` runtime.
 It is disabled by default. Enable it only when this service must send bounded HTTP and native Redis
 timings to an existing Glowroot Central deployment. No handler or projection code changes.
 
@@ -277,7 +277,7 @@ Reader and writer namespaces must match. If the writer publishes `crm.customer.c
 ## Optional L1 Reads
 
 L1 was first introduced in sample `0.8.0` with cache `0.9.0` and REST/platform `4.8.0`.
-For this `0.8.2` checkout, use cache `0.9.2`, REST/platform `4.8.2` and their packaged
+For this `0.8.3` checkout, use cache `0.9.2`, REST/platform `4.9.0` and their packaged
 native library. Dependency access is described below; L1 remains opt-in.
 
 Use L1 when the same customer or segment is requested often. Redis remains the source
@@ -298,7 +298,7 @@ public interface CustomerCacheService {
 }
 ```
 
-The `0.8.2` ID and segment handlers pass `CacheReadValue` to
+The `0.8.3` ID and segment handlers pass `CacheReadValue` to
 `CacheResponses.reply(value, missCode, notReadyCode, COMMON_ERRORS)`. The explicit
 boolean preserves `sample.errors.common-contract=false` (legacy JSON) or `true`
 (problem details). It overrides the helper's three-argument startup policy
@@ -426,7 +426,7 @@ This application runs on Rust-Java REST. It does not need a Spring starter or a 
 runtime dependency. Telemetry is disabled by default. When enabled, HTTP routes and native Redis
 read timings are collected inside the same Rust runtime. Handler and projection code do not change.
 
-This sample already uses the platform `4.8.2` with Glowroot ABI `6`. The optional
+This sample already uses the platform `4.9.0` with Glowroot ABI `6`. The optional
 `java-rust-glowroot-agent:0.7.1` JAR is needed only when you want `-javaagent` syntax; the embedded
 REST telemetry runtime does not require a separate agent dependency:
 
@@ -434,7 +434,7 @@ REST telemetry runtime does not require a separate agent dependency:
 <parent>
   <groupId>com.reactor</groupId>
   <artifactId>rust-java-platform-parent</artifactId>
-  <version>4.8.2</version>
+  <version>4.9.0</version>
   <relativePath/>
 </parent>
 ```
