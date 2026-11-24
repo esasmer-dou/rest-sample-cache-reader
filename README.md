@@ -1,16 +1,18 @@
 # rest-sample-cache-reader
 
-## Version 0.8.3
+## Current Source
 
-Sample `0.8.3` uses REST/platform `4.9.0`, cache `0.9.2` and model `0.5.3`.
+The `master` branch uses REST/platform `4.9.0`, cache `0.9.3` and model `0.5.3`.
+Cache `0.9.3` speeds up synchronous reads by ID without changing keys or
+requiring a refresh. The published sample tag `v0.8.3` still uses cache `0.9.2`.
 Java business code and native ABIs are unchanged. Upgrade the aligned dependencies together.
-[Upgrade and usage notes](docs/RELEASE_NOTES_v0.8.3.md).
+[Cache upgrade notes](docs/CACHE_0.9.3.md) · [Sample 0.8.3 release notes](docs/RELEASE_NOTES_v0.8.3.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
 
 ## Compose
 
-This 0.8.3 sample uses REST/platform 4.9.0 and the relevant cache or Dubbo 0.9.2 package. The Compose commands below are for local development. Release qualification runs on EmaTech; Windows and ARM execution checks are separate compatibility tests. A compiled platform artifact does not imply load-test qualification on that platform.
+The Compose commands below are for local development. Release qualification runs on EmaTech. Building for another platform does not qualify that platform under load.
 
 The shared [Compose topology](docker/compose/docker-compose.yml) starts PostgreSQL
 with schema/seed, Redis 7, writer, reader, provider and consumer. Clone all four
@@ -62,7 +64,7 @@ credentials and single DB/Redis instances, not an HA production deployment. Limi
 and smoke assertions are not runtime proof, a sustained-load/p99 result or a capacity
 guarantee; measure the selected profile, dataset and warmup separately.
 
-## Start With 0.8.3
+## Start Here: Versions
 
 The real projection read flow supports optional versioned L1 and owned JSON bodies. Separate profiles demonstrate public edge policies, native views, JWT, tracing, shared slabs and outbound HTTP. The default remains a Redis-only read service.
 
@@ -95,7 +97,7 @@ A small REST application that reads ready JSON snapshots from Redis.
 - This application does not connect to PostgreSQL.
 - This application does not write to Redis.
 
-Current versions: `rust-java-rest:4.9.0`, `java-rust-cache:0.9.2`, `rust-sample-model:0.5.3`.
+Current versions on `master`: `rust-java-rest:4.9.0`, `java-rust-cache:0.9.3`, `rust-sample-model:0.5.3`.
 
 ## Read This First
 
@@ -277,7 +279,7 @@ Reader and writer namespaces must match. If the writer publishes `crm.customer.c
 ## Optional L1 Reads
 
 L1 was first introduced in sample `0.8.0` with cache `0.9.0` and REST/platform `4.8.0`.
-For this `0.8.3` checkout, use cache `0.9.2`, REST/platform `4.9.0` and their packaged
+For the current source, use cache `0.9.3`, REST/platform `4.9.0` and their packaged
 native library. Dependency access is described below; L1 remains opt-in.
 
 Use L1 when the same customer or segment is requested often. Redis remains the source

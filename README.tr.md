@@ -1,16 +1,19 @@
 # rest-sample-cache-reader
 
-## 0.8.3 Sürümü
+## Güncel Kaynak Kodu
 
-Sample `0.8.3`, REST/platform `4.9.0`, cache `0.9.2` ve model `0.5.3` kullanır.
+`master` dalı REST/platform `4.9.0`, cache `0.9.3` ve model `0.5.3` kullanır.
+Cache `0.9.3`, kimlikle yapılan senkron okumaları hızlandırır. Redis anahtarları
+değişmez; veriyi yeniden yayımlamak gerekmez. Yayımlanmış örneğin `v0.8.3`
+etiketi cache `0.9.2` kullanmaya devam eder.
 Java iş kodu ve native ABI'ler değişmez. Eşleşen bağımlılıkları birlikte güncelleyin.
-[Geçiş ve kullanım notları](docs/RELEASE_NOTES_v0.8.3.tr.md).
+[Cache geçiş notları](docs/CACHE_0.9.3.tr.md) · [Örnek 0.8.3 sürüm notları](docs/RELEASE_NOTES_v0.8.3.tr.md).
 
 [English](README.md) | [Türkçe](README.tr.md)
 
 ## Compose
 
-Bu örnek 0.8.3 sürümünde REST/platform 4.9.0 ve ilgili cache veya Dubbo 0.9.2 paketiyle çalışır. Aşağıdaki Compose komutları yerel geliştirme içindir. Yayın doğrulaması EmaTech üzerinde yapılır; Windows ve ARM çalıştırma kontrolleri ayrı uyumluluk testleridir. Bir platformun derlenmiş olması, o platformda yük testi yapıldığı anlamına gelmez.
+Aşağıdaki Compose komutları yerel geliştirme içindir. Yayın doğrulaması EmaTech'te yapılır. Bir paketin başka bir platform için derlenmiş olması, o platformda yük testi yapıldığı anlamına gelmez.
 
 Ortak [Compose topolojisi](docker/compose/docker-compose.yml); şema/seed içeren
 PostgreSQL, Redis 7, writer, reader, provider ve consumer başlatır. Dört
@@ -65,7 +68,7 @@ değildir. Geliştirme kimlik bilgileri ve tek DB/Redis kullanır; HA production
 kurulumu değildir. Limitler ve smoke assertion'ları runtime kanıtı, sürekli yük/p99
 sonucu veya kapasite garantisi sayılmaz. Seçilen profil, veri ve warmup ayrı ölçülmelidir.
 
-## 0.8.3 İle Başlayın
+## Kullanılan Sürümler
 
 Gerçek projection okuma akışı, isteğe bağlı sürümlü L1 ve sahipliği izlenen JSON yanıtlarını destekler. Ayrı profiller public edge, native view, JWT, izleme, ortak tampon ve dış HTTP çağrısını gösterir. Varsayılan uygulama yalnız Redis'ten okur.
 
@@ -98,7 +101,7 @@ Redis'te hazır duran JSON snapshot'larını REST API ile sunan küçük bir uyg
 - Bu uygulama PostgreSQL'e bağlanmaz.
 - Bu uygulama Redis'e veri yazmaz.
 
-Kullanılan sürümler: `rust-java-rest:4.9.0`, `java-rust-cache:0.9.2`, `rust-sample-model:0.5.3`.
+`master` dalındaki sürümler: `rust-java-rest:4.9.0`, `java-rust-cache:0.9.3`, `rust-sample-model:0.5.3`.
 
 ## Önce Bu Bölümü Okuyun
 
@@ -280,7 +283,7 @@ Reader ve writer namespace değerleri aynı olmalıdır. Writer `crm.customer.ca
 ## İsteğe Bağlı L1 Okuma
 
 L1 ilk kez sample `0.8.0`, cache `0.9.0` ve REST/platform `4.8.0` ile sunuldu.
-Bu `0.8.3` kaynak kodu için cache `0.9.2`, REST/platform `4.9.0` ve pakete ait native
+Güncel kaynak kodu için cache `0.9.3`, REST/platform `4.9.0` ve pakete ait native
 dosyayı kullanın. Bağımlılık erişimi aşağıda açıklanır; L1 isteğe bağlı kalır.
 
 Aynı müşteri veya segment sık isteniyorsa L1 kullanabilirsiniz. Sürümlü verinin kaynağı

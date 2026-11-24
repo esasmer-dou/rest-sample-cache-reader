@@ -26,7 +26,18 @@
         <sample.build-directory>target</sample.build-directory>
         <sample.starter.artifact>rust-java-starter-cache-reader</sample.starter.artifact>
         <sample.model.scope>compile</sample.model.scope>
+        <java-rust-cache.version>0.9.3</java-rust-cache.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.reactor</groupId>
+                <artifactId>java-rust-cache</artifactId>
+                <version>${java-rust-cache.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>

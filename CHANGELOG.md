@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+Use cache `0.9.3` with REST/platform `4.9.0`. Redis keys, endpoints and runtime settings are unchanged.
+
+[Upgrade notes](docs/CACHE_0.9.3.md) | [Türkçe geçiş notları](docs/CACHE_0.9.3.tr.md)
+
 ## 0.8.3 - 2026-11-23
 
 Aligned with REST/platform `4.9.0`.
