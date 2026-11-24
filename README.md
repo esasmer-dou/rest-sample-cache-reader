@@ -12,57 +12,25 @@ Java business code and native ABIs are unchanged. Upgrade the aligned dependenci
 
 ## Compose
 
-The Compose commands below are for local development. Release qualification runs on EmaTech. Building for another platform does not qualify that platform under load.
+Use [Quick Start](#quick-start) if you only need the reader and a Redis connection.
 
-The shared [Compose topology](docker/compose/docker-compose.yml) starts PostgreSQL
-with schema/seed, Redis 7, writer, reader, provider and consumer. Clone all four
-`rest-sample-*` repositories under the same parent, keeping their repository names.
-Prerequisites: Linux/amd64 Docker Engine, Compose v2 with `--wait`, and JDK 21/Maven
-with the checkout's aligned dependencies installed or resolvable. Bash also needs
-`curl`, `jq` and `timeout`; PowerShell needs version 7. Maven credentials remain on
-the host, not in images. Run from this repository's root:
+To run all four samples together, keep their checkouts under one parent directory. Use JDK 21, Maven with access to the sample dependencies, and Docker Compose v2 with Linux containers. From the cache reader root, build the application JARs and copy their runtime dependencies:
 
 ```bash
-bash scripts/verify-compose-topology.sh --prepare
-# Alternative: native catalog provider + matching native-static consumer
-bash scripts/verify-compose-topology.sh --prepare --native-provider
+mvn -f pom.xml clean package dependency:copy-dependencies -DincludeScope=runtime -DskipTests
+mvn -f ../rest-sample-cache-writer/pom.xml clean package dependency:copy-dependencies -DincludeScope=runtime -DskipTests
+mvn -f ../rest-sample-dubbo-provider/pom.xml -Pfull-provider clean package dependency:copy-dependencies -DincludeScope=runtime -DskipTests
+mvn -f ../rest-sample-dubbo-consumer/pom.xml -Pfull-dubbo-consumer clean package dependency:copy-dependencies -DincludeScope=runtime -DskipTests
+docker compose -f docker/compose/docker-compose.yml up --build --wait --wait-timeout 180
 ```
 
-PowerShell equivalent: `pwsh -File scripts/verify-compose-topology.ps1 -Prepare`;
-add `-NativeProvider` for the alternative. Preparation runs `clean package` with
-tests skipped and copies runtime dependencies for all four samples. Without
-`--prepare` / `-Prepare`, supply the selected profile's existing `target/*.jar` and
-`target/dependency/*.jar`; the native provider uses `target/native-provider/`
-instead. Default profiles are `full-provider` and `full-dubbo-consumer`; native mode
-uses `native-provider` and `native-static-consumer`. Native mode also needs the
-unchanged ABI-3 resources under sibling checkout
-`java-rust-dubbo-spring-boot/java-rust-dubbo-native-linux-x64/src/main/resources/native/`.
+The stack starts PostgreSQL, Redis, and the four samples. The writer reads PostgreSQL and publishes to Redis. The reader serves the cached data. The consumer uses the Dubbo provider for database operations.
 
-All six containers have 1 CPU / 128 MiB limits; the applications use OpenJ9 Java 21
-with JNI. Reader HTTP binds `127.0.0.1:18081`, consumer HTTP `127.0.0.1:18082`;
-PostgreSQL/Redis stay private. Override `READER_PORT` / `CONSUMER_PORT` if occupied.
-Reader readiness is `/app/readiness`; consumer readiness is `/app/ready`. Both have
-`/app/health`. Writer has no HTTP server: its check requires live fenced projection
-pointers. Provider readiness is TCP, strengthened by the consumer's catalog RPC.
+- Cache reader: [http://localhost:18081/app/readiness](http://localhost:18081/app/readiness).
+- Dubbo consumer: [http://localhost:18082/app/ready](http://localhost:18082/app/ready).
+- If either port is in use, set `READER_PORT` or `CONSUMER_PORT` before starting Compose.
 
-The full smoke checks POST/PATCH through consumer/provider into PostgreSQL,
-consumer DB reads, writer publication, advanced fencing tokens, live Redis TTLs
-and converged reader JSON. **The native overlay is catalog-only**, not a customer
-DB/command provider. Its matching consumer calls `CatalogJsonService`, not
-`NestedCatalogService`; setting `surface=catalog-only` on the full consumer is not
-a substitute. Native smoke checks catalog RPC and the same changing
-PostgreSQL-to-writer-to-Redis-to-reader path using explicit SQL INSERT/UPDATE/DELETE,
-which bypasses the provider. It does not claim customer RPC or streaming coverage.
-
-Both modes take five bounded PID/cgroup RSS samples below 128 MiB. Evidence goes to
-the shared parent's `.tmp/wp3-*`; failures are nonzero. Inspect `startup.log`,
-`containers.log` and `result.properties`. Default cleanup removes only the unique
-smoke project's containers and volume; `--keep` / `-Keep` retains them for diagnosis.
-These are idiomatic application responsibilities with generated wiring and explicit
-Java business code, not minimal benchmark handlers. The demo uses development
-credentials and single DB/Redis instances, not an HA production deployment. Limits
-and smoke assertions are not runtime proof, a sustained-load/p99 result or a capacity
-guarantee; measure the selected profile, dataset and warmup separately.
+Stop the stack with `docker compose -f docker/compose/docker-compose.yml down`. This keeps the local PostgreSQL volume. Use the [provider's Docker guide](https://github.com/esasmer-dou/rest-sample-dubbo-provider/blob/master/docker/README.md) when you only need the provider and PostgreSQL.
 
 ## Start Here: Versions
 
@@ -593,4 +561,3 @@ If Maven returns `401`, check the token, repository access, environment variable
 - [Production settings](src/main/resources/config/production.properties)
 - [Advanced tuning](src/main/resources/config/advanced-tuning.properties)
 - [v0.8.0 release notes](docs/RELEASE_NOTES_v0.8.0.md)
-- [Unreleased documentation corrections](docs/RELEASE_NOTES_UNRELEASED.md)

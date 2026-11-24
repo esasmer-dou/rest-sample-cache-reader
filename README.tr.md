@@ -13,60 +13,25 @@ Java iş kodu ve native ABI'ler değişmez. Eşleşen bağımlılıkları birlik
 
 ## Compose
 
-Aşağıdaki Compose komutları yerel geliştirme içindir. Yayın doğrulaması EmaTech'te yapılır. Bir paketin başka bir platform için derlenmiş olması, o platformda yük testi yapıldığı anlamına gelmez.
+Yalnızca reader ve Redis bağlantısı gerekiyorsa [Hızlı Başlangıç](#hızlı-başlangıç) bölümünü izleyin.
 
-Ortak [Compose topolojisi](docker/compose/docker-compose.yml); şema/seed içeren
-PostgreSQL, Redis 7, writer, reader, provider ve consumer başlatır. Dört
-`rest-sample-*` deposunu kendi adlarını koruyarak aynı üst dizine alın.
-Gereksinimler: Linux/amd64 Docker Engine, `--wait` destekli Compose v2 ve kaynak
-ağacının uyumlu bağımlılıklarını çözebilen JDK 21/Maven. Bash için `curl`, `jq`,
-`timeout`; PowerShell için sürüm 7 gerekir. Maven kimlik bilgileri host'ta kalır,
-image içine alınmaz. Bu deponun kök dizininden çalıştırın:
+Dört örneği birlikte çalıştırmak için repoları aynı üst dizine klonlayın. JDK 21, Maven paketlerine erişim ve Linux container çalıştıran Docker Compose v2 gerekir. Cache reader dizininde uygulama JAR'larını ve çalışma zamanı bağımlılıklarını hazırlayın:
 
 ```bash
-bash scripts/verify-compose-topology.sh --prepare
-# Alternatif: native katalog provider + eşleşen native-static consumer
-bash scripts/verify-compose-topology.sh --prepare --native-provider
+mvn -f pom.xml clean package dependency:copy-dependencies -DincludeScope=runtime -DskipTests
+mvn -f ../rest-sample-cache-writer/pom.xml clean package dependency:copy-dependencies -DincludeScope=runtime -DskipTests
+mvn -f ../rest-sample-dubbo-provider/pom.xml -Pfull-provider clean package dependency:copy-dependencies -DincludeScope=runtime -DskipTests
+mvn -f ../rest-sample-dubbo-consumer/pom.xml -Pfull-dubbo-consumer clean package dependency:copy-dependencies -DincludeScope=runtime -DskipTests
+docker compose -f docker/compose/docker-compose.yml up --build --wait --wait-timeout 180
 ```
 
-PowerShell karşılığı: `pwsh -File scripts/verify-compose-topology.ps1 -Prepare`;
-alternatif için `-NativeProvider` ekleyin. Hazırlık, dört sample için testleri
-çalıştırmadan `clean package` yapar ve runtime bağımlılıklarını kopyalar.
-`--prepare` / `-Prepare` kullanılmıyorsa seçili profilin `target/*.jar` ve
-`target/dependency/*.jar` çıktıları hazır olmalıdır. Native provider bunların yerine
-`target/native-provider/` kullanır. Varsayılan profiller `full-provider` ve
-`full-dubbo-consumer`; native mod profilleri `native-provider` ve
-`native-static-consumer` olur. Native mod ayrıca yan yana alınmış
-`java-rust-dubbo-spring-boot/java-rust-dubbo-native-linux-x64/src/main/resources/native/`
-dizinindeki değiştirilmemiş ABI-3 kaynaklarını gerektirir.
+Compose, PostgreSQL ve Redis ile dört örneği başlatır. Writer, PostgreSQL'den aldığı veriyi Redis'e yazar. Reader, Redis'teki veriyi HTTP üzerinden sunar. Consumer, veritabanı işlemleri için Dubbo provider'ı çağırır.
 
-Altı container'ın her biri 1 CPU / 128 MiB ile sınırlıdır; uygulamalar OpenJ9
-Java 21 ve JNI kullanır. Reader HTTP `127.0.0.1:18081`, consumer HTTP
-`127.0.0.1:18082` üzerinden açılır; PostgreSQL/Redis dışarı açılmaz. Portlar doluysa
-`READER_PORT` / `CONSUMER_PORT` değiştirin. Reader readiness adresi
-`/app/readiness`, consumer readiness adresi `/app/ready` olur. İkisinde de
-`/app/health` vardır. Writer HTTP sunmaz; kontrolü canlı fenced projection
-pointer'larını doğrular. Provider TCP kontrolünü consumer'ın gerçek katalog RPC'si
-güçlendirir.
+- Cache reader: [http://localhost:18081/app/readiness](http://localhost:18081/app/readiness).
+- Dubbo consumer: [http://localhost:18082/app/ready](http://localhost:18082/app/ready).
+- Bağlantı noktaları kullanımdaysa Compose'u başlatmadan önce `READER_PORT` veya `CONSUMER_PORT` değerini değiştirin.
 
-Full smoke; consumer/provider üzerinden POST/PATCH ile PostgreSQL yazımını,
-consumer DB sorgusunu, writer yayınını, artan fencing token'ını, canlı Redis TTL'ini
-ve reader JSON yakınsamasını denetler. **Native overlay yalnız katalog içindir**;
-müşteri DB/command provider değildir. Eşleşen consumer `NestedCatalogService` yerine
-`CatalogJsonService` çağırır; full consumer'da yalnız `surface=catalog-only` seçmek
-yeterli olmaz. Native smoke katalog RPC'sini ve aynı değişen
-PostgreSQL-writer-Redis-reader akışını doğrudan SQL INSERT/UPDATE/DELETE ile
-denetler. Bu SQL provider'ı atlar; müşteri RPC veya streaming kapsamı iddia edilmez.
-
-İki mod da PID/cgroup RSS için 128 MiB altında beş sınırlı örnek alır. Kanıtlar
-ortak üst dizindeki `.tmp/wp3-*` altına yazılır; hata sıfırdan farklı exit üretir.
-`startup.log`, `containers.log`, `result.properties` dosyalarını inceleyin.
-Varsayılan cleanup yalnız benzersiz smoke projesinin container ve volume'ünü siler;
-`--keep` / `-Keep` tanı için korur. Bu topoloji, üretilmiş bağlantılar ve açık Java
-iş koduyla doğal uygulama sorumluluklarını gösterir; minimal benchmark handler'ı
-değildir. Geliştirme kimlik bilgileri ve tek DB/Redis kullanır; HA production
-kurulumu değildir. Limitler ve smoke assertion'ları runtime kanıtı, sürekli yük/p99
-sonucu veya kapasite garantisi sayılmaz. Seçilen profil, veri ve warmup ayrı ölçülmelidir.
+Durdurmak için `docker compose -f docker/compose/docker-compose.yml down` komutunu kullanın. Yerel PostgreSQL verisi silinmez. Yalnızca provider ve PostgreSQL gerekiyorsa [provider'ın Docker rehberini](https://github.com/esasmer-dou/rest-sample-dubbo-provider/blob/master/docker/README.tr.md) izleyin.
 
 ## Kullanılan Sürümler
 
@@ -601,4 +566,3 @@ Maven `401` dönerse token'ı, repo erişimini, environment variable'ı ve serve
 - [Production ayarları](src/main/resources/config/production.properties)
 - [Advanced tuning ayarları](src/main/resources/config/advanced-tuning.properties)
 - [v0.8.0 sürüm notları](docs/RELEASE_NOTES_v0.8.0.tr.md)
-- [Henüz yayımlanmamış belge düzeltmeleri](docs/RELEASE_NOTES_UNRELEASED.tr.md)
